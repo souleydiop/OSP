@@ -2,2117 +2,1454 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0a0f1e">
-<meta name="description" content="OSP Intelligence - Gestion des incidents fibre optique">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#070c1a">
 <title>OSP Intelligence</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-:root {
-  --bg: #070b18;
-  --bg2: #0d1528;
-  --bg3: #111d35;
-  --card: #0f1a30;
-  --card2: #162240;
-  --accent: #00d4ff;
-  --accent2: #ff6b35;
-  --accent3: #00ff9f;
-  --warn: #ffb800;
-  --danger: #ff3c5a;
-  --text: #e2eaf8;
-  --text2: #8fa3c8;
-  --text3: #4a6080;
-  --border: #1e3358;
-  --border2: #2a4570;
-  --glow: 0 0 20px rgba(0,212,255,0.15);
-  --glow2: 0 0 30px rgba(0,212,255,0.25);
-  --font-display: 'Rajdhani', sans-serif;
-  --font-mono: 'Share Tech Mono', monospace;
-  --font-body: 'Exo 2', sans-serif;
+/* =============================================
+   ROOT TOKENS
+============================================= */
+:root{
+  --bg:#070c1a; --bg2:#0d1628; --bg3:#121e38;
+  --card:#0f1c32; --bdr:#1a3050; --bdr2:#244070;
+  --a:#00d4ff; --a2:#ff6835; --a3:#00ff9f; --w:#ffb800; --d:#ff3c5a;
+  --t:#e4ecfa; --t2:#8fa8cc; --t3:#445870;
+  --nav:58px; --top:52px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* =============================================
+   RESET
+============================================= */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  font-size:15px;line-height:1.5;
+  background:var(--bg);color:var(--t);
+  height:100%;overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;-webkit-appearance:none;appearance:none}
+input[type=file]{display:none!important}
 
-html, body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 14px;
-  overflow: hidden;
-}
+/* =============================================
+   SHELL
+============================================= */
+#shell{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
 
-/* ── LAYOUT ── */
-#app { display: flex; height: 100vh; }
+/* TOP BAR */
+#top{
+  height:var(--top);flex-shrink:0;
+  background:var(--bg2);border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;padding:0 14px;gap:10px;
+  padding-top:var(--safe-t);
+}
+.top-logo{
+  width:32px;height:32px;border-radius:9px;
+  background:linear-gradient(135deg,var(--a),var(--a2));
+  display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0
+}
+#top-title{font-size:16px;font-weight:700;letter-spacing:.5px;flex:1}
+.top-r{display:flex;align-items:center;gap:8px}
+.top-dot{width:7px;height:7px;border-radius:50%;background:var(--a3);box-shadow:0 0 8px var(--a3);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.top-btn{
+  background:var(--a);color:#000;border:none;border-radius:8px;
+  padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:4px
+}
+.lang-sw{display:flex;background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;overflow:hidden}
+.lang-sw span{padding:4px 8px;font-size:11px;font-weight:700;color:var(--t3);cursor:pointer;transition:all .15s}
+.lang-sw span.on{background:var(--a);color:#000}
 
-/* SIDEBAR */
-#sidebar {
-  width: 220px;
-  min-width: 220px;
-  background: var(--bg2);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  z-index: 100;
-  transition: width 0.3s;
+/* PAGES */
+#pages{flex:1;overflow:hidden;position:relative}
+.pg{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  display:none;
+  padding:14px 14px calc(var(--nav) + var(--safe-b) + 14px);
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
 }
+.pg::-webkit-scrollbar{display:none}
+.pg.on{display:block;animation:pgIn .2s ease}
+@keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-#sidebar.collapsed { width: 60px; min-width: 60px; }
+/* BOTTOM NAV */
+#nav{
+  position:fixed;bottom:0;left:0;right:0;
+  height:calc(var(--nav) + var(--safe-b));
+  background:var(--bg2);border-top:1px solid var(--bdr);
+  display:flex;z-index:100;padding-bottom:var(--safe-b);
+}
+.ni{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;
+  cursor:pointer;color:var(--t3);position:relative;
+  transition:color .15s;padding:5px 0;
+}
+.ni.on{color:var(--a)}
+.ni.on::before{
+  content:'';position:absolute;top:0;left:20%;right:20%;
+  height:2px;background:var(--a);border-radius:0 0 3px 3px
+}
+.ni-ico{font-size:23px;line-height:1}
+.ni-lbl{font-size:9px;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
+.ni-dot{
+  position:absolute;top:3px;right:calc(50% - 20px);
+  background:var(--d);color:#fff;font-size:9px;font-weight:700;
+  padding:0 4px;border-radius:8px;min-width:16px;height:16px;
+  line-height:16px;text-align:center;display:none
+}
+.ni-dot.on{display:block}
 
-.sidebar-logo {
-  padding: 20px 16px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+/* =============================================
+   DESIGN SYSTEM
+============================================= */
 
-.logo-icon {
-  width: 36px; height: 36px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-  box-shadow: var(--glow);
-}
+/* Card */
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:12px}
+.card-h{padding:13px 15px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-t{font-size:14px;font-weight:700;letter-spacing:.4px;display:flex;align-items:center;gap:6px}
+.card-b{padding:14px 15px}
 
-.logo-text {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--accent);
-  white-space: nowrap;
-  transition: opacity 0.2s;
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi-grid.wide{grid-template-columns:1fr 1fr 1fr}
+.kpi{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:14px;padding:14px 12px;position:relative;overflow:hidden
 }
-.logo-sub {
-  font-size: 9px;
-  color: var(--text3);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.b::after{background:linear-gradient(90deg,var(--a),transparent)}
+.kpi.o::after{background:linear-gradient(90deg,var(--a2),transparent)}
+.kpi.g::after{background:linear-gradient(90deg,var(--a3),transparent)}
+.kpi.y::after{background:linear-gradient(90deg,var(--w),transparent)}
+.kpi.r::after{background:linear-gradient(90deg,var(--d),transparent)}
+.kpi-ico{font-size:22px;margin-bottom:6px;display:block}
+.kpi-v{font-size:28px;font-weight:800;line-height:1;margin-bottom:2px}
+.kpi.b .kpi-v{color:var(--a)}
+.kpi.o .kpi-v{color:var(--a2)}
+.kpi.g .kpi-v{color:var(--a3)}
+.kpi.y .kpi-v{color:var(--w)}
+.kpi.r .kpi-v{color:var(--d)}
+.kpi-l{font-size:10px;color:var(--t2);font-weight:600;letter-spacing:.8px;text-transform:uppercase}
+.kpi-s{font-size:10px;color:var(--t3);margin-top:3px}
 
-#sidebar.collapsed .logo-text,
-#sidebar.collapsed .logo-sub { opacity: 0; pointer-events: none; }
+/* Chart */
+.ch-wrap{padding:4px 8px 8px}
+canvas{max-height:200px!important}
 
-.nav-section {
-  padding: 12px 8px 4px;
-  font-size: 9px;
-  letter-spacing: 2px;
-  color: var(--text3);
-  text-transform: uppercase;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-  overflow: hidden;
-}
-#sidebar.collapsed .nav-section { opacity: 0; }
+/* Badge */
+.b{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+.bp1{background:rgba(255,60,90,.2);color:var(--d);border:1px solid rgba(255,60,90,.3)}
+.bp2{background:rgba(255,184,0,.2);color:var(--w);border:1px solid rgba(255,184,0,.3)}
+.bp3{background:rgba(0,212,255,.12);color:var(--a);border:1px solid rgba(0,212,255,.25)}
+.bbb{background:rgba(255,104,53,.15);color:var(--a2)}
+.bft{background:rgba(0,212,255,.12);color:var(--a)}
+.bms{background:rgba(0,255,159,.12);color:var(--a3)}
+.bin{background:rgba(0,255,159,.12);color:var(--a3)}
+.bot{background:rgba(255,60,90,.15);color:var(--d)}
+.bso{background:rgba(0,255,159,.12);color:var(--a3)}
+.bop{background:rgba(255,184,0,.15);color:var(--w)}
+.bok{background:rgba(0,255,159,.12);color:var(--a3)}
+.bnk{background:rgba(255,60,90,.15);color:var(--d)}
 
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  cursor: pointer;
-  border-radius: 8px;
-  margin: 2px 8px;
-  transition: all 0.2s;
-  color: var(--text2);
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  position: relative;
+/* Filters strip */
+.fbar{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;margin-bottom:12px;scrollbar-width:none}
+.fbar::-webkit-scrollbar{display:none}
+.fsel{
+  background:var(--card);border:1px solid var(--bdr);border-radius:20px;
+  padding:7px 13px;font-size:12px;color:var(--t2);
+  white-space:nowrap;cursor:pointer;flex-shrink:0;outline:none
 }
+.fchip{
+  background:var(--card);border:1px solid var(--bdr);border-radius:20px;
+  padding:7px 13px;font-size:12px;color:var(--t2);white-space:nowrap;cursor:pointer;flex-shrink:0
+}
+.fchip.on{background:rgba(0,212,255,.1);border-color:var(--a);color:var(--a)}
 
-.nav-item:hover { background: var(--bg3); color: var(--text); }
-.nav-item.active {
-  background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,212,255,0.05));
-  color: var(--accent);
-  border: 1px solid rgba(0,212,255,0.2);
+/* Search */
+.sbar{
+  display:flex;align-items:center;gap:8px;
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:12px;padding:10px 13px;margin-bottom:12px
 }
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 20%; height: 60%;
-  width: 3px;
-  background: var(--accent);
-  border-radius: 0 2px 2px 0;
-}
+.sbar input{flex:1;background:none;border:none;color:var(--t);font-size:14px;outline:none}
+.sbar input::placeholder{color:var(--t3)}
 
-.nav-icon { font-size: 18px; flex-shrink: 0; width: 22px; text-align: center; }
-.nav-label { transition: opacity 0.2s; }
-#sidebar.collapsed .nav-label { opacity: 0; }
+/* List items */
+.li{padding:13px 15px;border-bottom:1px solid rgba(26,48,80,.6);display:flex;align-items:flex-start;gap:10px}
+.li:last-child{border-bottom:none}
+.li-body{flex:1;min-width:0}
+.li-name{font-size:14px;font-weight:700;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-sub{font-size:12px;color:var(--t2);margin-top:2px}
+.li-tags{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap}
+.li-r{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
 
-.nav-badge {
-  margin-left: auto;
-  background: var(--danger);
-  color: white;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  padding: 2px 6px;
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-#sidebar.collapsed .nav-badge { display: none; }
+/* Priority bar */
+.pbar-l{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0}
 
-.sidebar-bottom {
-  margin-top: auto;
-  padding: 12px;
-  border-top: 1px solid var(--border);
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px 18px;border-radius:12px;border:none;
+  font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap
 }
+.btn-p{background:var(--a);color:#000}
+.btn-p:active{opacity:.85}
+.btn-s{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:var(--a)}
+.btn-o{background:transparent;border:1px solid var(--bdr2);color:var(--t2)}
+.btn-d{background:rgba(255,60,90,.1);border:1px solid var(--d);color:var(--d)}
+.btn-g{background:rgba(0,255,159,.1);border:1px solid var(--a3);color:var(--a3)}
+.btn-full{width:100%}
+.btn-sm{padding:7px 12px;font-size:12px;border-radius:9px}
 
-.lang-toggle {
-  display: flex;
-  background: var(--bg3);
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid var(--border);
+/* FAB */
+.fab{
+  position:fixed;right:16px;bottom:calc(var(--nav) + var(--safe-b) + 14px);
+  width:54px;height:54px;border-radius:50%;background:var(--a);
+  color:#000;border:none;font-size:26px;cursor:pointer;z-index:90;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(0,212,255,.45)
 }
-.lang-btn {
-  flex: 1;
-  padding: 6px;
-  text-align: center;
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text3);
-  transition: all 0.2s;
-}
-.lang-btn.active { background: var(--accent); color: #000; font-weight: bold; }
-#sidebar.collapsed .lang-toggle { display: none; }
+.fab:active{transform:scale(.92)}
 
-#collapse-btn {
-  width: 28px; height: 28px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text2);
-  margin-top: 8px;
-  font-size: 14px;
-  transition: all 0.2s;
+/* Forms */
+.fg{margin-bottom:13px}
+.fl{display:block;font-size:10px;font-weight:700;letter-spacing:1px;color:var(--t3);text-transform:uppercase;margin-bottom:5px}
+.fi,.fs,.ft{
+  width:100%;background:var(--bg2);border:1px solid var(--bdr);
+  border-radius:11px;padding:12px 14px;color:var(--t);
+  font-size:15px;outline:none;transition:border-color .2s
 }
-#collapse-btn:hover { border-color: var(--accent); color: var(--accent); }
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--a);box-shadow:0 0 0 3px rgba(0,212,255,.08)}
+.ft{resize:vertical;min-height:80px}
+.frow{display:flex;gap:10px}
+.frow .fg{flex:1}
 
-/* MAIN */
-#main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  min-width: 0;
+/* Upload zone */
+.upz{
+  border:2px dashed var(--bdr2);border-radius:12px;
+  padding:22px 14px;text-align:center;cursor:pointer;
+  background:var(--bg2);transition:all .2s;margin-bottom:12px
 }
+.upz:active,.upz.ov{border-color:var(--a);background:rgba(0,212,255,.04)}
+.upz-ico{font-size:34px;margin-bottom:7px}
+.upz-t{color:var(--t2);font-size:14px}
+.upz-s{color:var(--t3);font-size:11px;margin-top:3px}
 
-/* TOPBAR */
-#topbar {
-  height: 56px;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 16px;
-  flex-shrink: 0;
-}
+/* Progress */
+.pb{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:6px 0}
+.pf{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--a),var(--a2));transition:width .4s ease}
 
-.topbar-title {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--text);
+/* Sheet (bottom drawer) */
+.sh-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200}
+.sh-ov.on{display:block}
+.sh{
+  position:fixed;left:0;right:0;bottom:0;
+  background:var(--bg2);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--bdr2);z-index:201;
+  max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0 16px calc(var(--safe-b) + 16px);
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1)
 }
-.topbar-subtitle {
-  font-size: 11px;
-  color: var(--text3);
-  font-family: var(--font-mono);
-}
+.sh.on{transform:translateY(0)}
+.sh-hdl{width:38px;height:4px;border-radius:2px;background:var(--bdr2);margin:10px auto 14px}
+.sh-tit{font-size:18px;font-weight:800;letter-spacing:.4px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.sh-x{color:var(--t3);font-size:24px;cursor:pointer;line-height:1}
+.sh-x:active{color:var(--d)}
 
-.topbar-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+/* Info rows */
+.ir{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(26,48,80,.5)}
+.ir:last-child{border-bottom:none}
+.ir-k{font-size:12px;color:var(--t3)}
+.ir-v{font-size:13px;color:var(--t);font-weight:600;text-align:right;max-width:60%;word-break:break-word}
 
-.status-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--accent3);
-  box-shadow: 0 0 8px var(--accent3);
-  animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0%,100% { opacity: 1; } 50% { opacity: 0.4; }
-}
+/* Stat row */
+.sr{display:flex;align-items:center;gap:10px;padding:9px 15px}
+.sr-l{font-size:13px;color:var(--t2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.sr-b{flex:2;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.sr-f{height:100%;background:linear-gradient(90deg,var(--a),var(--a2));border-radius:3px}
+.sr-v{font-size:13px;color:var(--a);font-weight:700;width:36px;text-align:right;flex-shrink:0}
 
-.topbar-time {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text2);
-}
+/* Section label */
+.slbl{font-size:10px;font-weight:700;letter-spacing:1.2px;color:var(--t3);text-transform:uppercase;padding:4px 0 8px;margin-top:2px}
 
-/* CONTENT */
-#content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 20px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border2) transparent;
-}
+/* Toast */
+#toasts{position:fixed;bottom:calc(var(--nav) + var(--safe-b) + 10px);right:12px;z-index:999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{background:var(--card);border-radius:11px;padding:10px 14px;font-size:13px;font-weight:500;border-left:3px solid;animation:tIn .25s ease;max-width:270px}
+.ts{border-color:var(--a3)}.te{border-color:var(--d)}.ti{border-color:var(--a)}
+@keyframes tIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
 
-/* MODULE PAGES */
-.module-page { display: none; animation: fadeIn 0.3s ease; }
-.module-page.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+/* Chip tabs */
+.ctabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;margin-bottom:14px}
+.ctabs::-webkit-scrollbar{display:none}
+.ct{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;
+  color:var(--t2);cursor:pointer;white-space:nowrap;flex-shrink:0
+}
+.ct.on{background:rgba(0,212,255,.12);border-color:var(--a);color:var(--a)}
 
-/* ── DASHBOARD ── */
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
-}
+/* Photo preview */
+.ph-prev{width:100%;border-radius:10px;margin-top:8px;display:none;max-height:200px;object-fit:contain;background:var(--bg)}
 
-.kpi-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s;
-}
-.kpi-card:hover {
-  border-color: var(--border2);
-  box-shadow: var(--glow);
-  transform: translateY(-2px);
-}
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-}
-.kpi-card.blue::before { background: linear-gradient(90deg, var(--accent), transparent); }
-.kpi-card.orange::before { background: linear-gradient(90deg, var(--accent2), transparent); }
-.kpi-card.green::before { background: linear-gradient(90deg, var(--accent3), transparent); }
-.kpi-card.yellow::before { background: linear-gradient(90deg, var(--warn), transparent); }
-.kpi-card.red::before { background: linear-gradient(90deg, var(--danger), transparent); }
+/* Map */
+#omap{position:absolute;inset:0}
+.leaflet-container{background:var(--bg2)!important}
+.leaflet-control-zoom a{background:var(--bg2)!important;color:var(--t)!important;border-color:var(--bdr)!important}
 
-.kpi-icon { font-size: 28px; margin-bottom: 10px; display: block; }
-.kpi-value {
-  font-family: var(--font-display);
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-.kpi-card.blue .kpi-value { color: var(--accent); }
-.kpi-card.orange .kpi-value { color: var(--accent2); }
-.kpi-card.green .kpi-value { color: var(--accent3); }
-.kpi-card.yellow .kpi-value { color: var(--warn); }
-.kpi-card.red .kpi-value { color: var(--danger); }
-.kpi-label {
-  font-size: 11px;
-  color: var(--text2);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-family: var(--font-mono);
-}
-.kpi-sub {
-  font-size: 10px;
-  color: var(--text3);
-  margin-top: 6px;
-  font-family: var(--font-mono);
-}
+/* Map page wrapper */
+#pg-opt{padding:0!important}
+#opt-wrap{position:absolute;inset:0;overflow:hidden}
 
-.charts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 20px;
+/* Sliding panel */
+#mpanel{
+  position:absolute;left:0;right:0;bottom:0;
+  background:var(--bg2);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--bdr2);z-index:50;
+  max-height:80dvh;
+  transform:translateY(calc(100% - 62px));
+  transition:transform .3s cubic-bezier(.32,.72,0,1);
+  display:flex;flex-direction:column;
 }
-@media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+#mpanel.exp{transform:translateY(0)}
+.mp-hdl{width:38px;height:4px;border-radius:2px;background:var(--bdr2);margin:10px auto 0}
+.mp-peek{display:flex;align-items:center;gap:10px;padding:10px 15px 8px;cursor:pointer}
+.mp-peek-t{font-size:14px;font-weight:700;flex:1;color:var(--t)}
+.mp-body{overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 15px calc(var(--safe-b)+15px)}
+.mp-body::-webkit-scrollbar{display:none}
 
-.chart-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 18px;
+/* Impact marker animation */
+@keyframes ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.5);opacity:0}}
+.impact-dot{
+  width:14px;height:14px;border-radius:50%;background:var(--d);
+  position:relative;cursor:pointer
 }
-.chart-title {
-  font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  color: var(--text2);
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.chart-title span { color: var(--text3); font-size: 11px; font-family: var(--font-mono); }
-canvas { max-height: 220px; }
-
-.full-width { grid-column: 1 / -1; }
-
-/* FILTERS BAR */
-.filters-bar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
-  align-items: center;
+.impact-dot::after{
+  content:'';position:absolute;inset:-3px;border-radius:50%;
+  border:3px solid var(--d);animation:ring 1.4s infinite
 }
 
-.filter-select {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text2);
-  padding: 7px 12px;
-  font-family: var(--font-body);
-  font-size: 12px;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.filter-select:focus { border-color: var(--accent); color: var(--text); }
+/* Empty state */
+.empty{text-align:center;padding:36px 20px;color:var(--t3)}
+.empty-ico{font-size:44px;opacity:.3;margin-bottom:10px}
+.empty-t{font-size:14px;font-weight:600}
+.empty-s{font-size:12px;margin-top:4px}
 
-.btn {
-  padding: 7px 16px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.btn-primary {
-  background: var(--accent);
-  color: #000;
-}
-.btn-primary:hover { background: #00b8d9; box-shadow: var(--glow); }
-.btn-outline {
-  background: transparent;
-  border: 1px solid var(--border2);
-  color: var(--text2);
-}
-.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-.btn-danger {
-  background: rgba(255,60,90,0.15);
-  border: 1px solid var(--danger);
-  color: var(--danger);
-}
-
-/* TABLE */
-.table-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 20px;
-}
-.table-header {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.table-title {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  display: flex; align-items: center; gap: 8px;
-}
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; }
-th {
-  padding: 10px 14px;
-  text-align: left;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  color: var(--text3);
-  text-transform: uppercase;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-td {
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(30,51,88,0.5);
-  font-size: 12px;
-  color: var(--text2);
-  white-space: nowrap;
-}
-tr:hover td { background: rgba(255,255,255,0.02); }
-tr:last-child td { border-bottom: none; }
-
-/* BADGES */
-.badge {
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  font-weight: bold;
-  letter-spacing: 0.5px;
-}
-.badge-p1 { background: rgba(255,60,90,0.2); color: var(--danger); border: 1px solid rgba(255,60,90,0.3); }
-.badge-p2 { background: rgba(255,184,0,0.2); color: var(--warn); border: 1px solid rgba(255,184,0,0.3); }
-.badge-p3 { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
-.badge-backbone { background: rgba(255,107,53,0.15); color: var(--accent2); }
-.badge-fttm { background: rgba(0,212,255,0.1); color: var(--accent); }
-.badge-msan { background: rgba(0,255,159,0.1); color: var(--accent3); }
-.badge-insla { background: rgba(0,255,159,0.1); color: var(--accent3); }
-.badge-outsla { background: rgba(255,60,90,0.15); color: var(--danger); }
-.badge-solde { background: rgba(0,255,159,0.1); color: var(--accent3); }
-.badge-open { background: rgba(255,184,0,0.15); color: var(--warn); }
-.badge-ok { background: rgba(0,255,159,0.1); color: var(--accent3); }
-.badge-nok { background: rgba(255,60,90,0.15); color: var(--danger); }
-
-/* PROGRESS BAR */
-.progress-bar {
-  height: 6px;
-  background: var(--bg3);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  border-radius: 3px;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  transition: width 0.8s ease;
-}
-
-/* SECTION TITLE */
-.section-title {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: var(--text);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.section-title::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, var(--border2), transparent);
-}
-
-/* FORM */
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-}
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-label {
-  font-size: 10px;
-  font-family: var(--font-mono);
-  letter-spacing: 1px;
-  color: var(--text3);
-  text-transform: uppercase;
-}
-.form-input, .form-select, .form-textarea {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 12px;
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.2s;
-  width: 100%;
-}
-.form-input:focus, .form-select:focus, .form-textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(0,212,255,0.1);
-}
-.form-textarea { resize: vertical; min-height: 80px; }
-
-/* UPLOAD ZONE */
-.upload-zone {
-  border: 2px dashed var(--border2);
-  border-radius: 12px;
-  padding: 32px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  background: var(--bg2);
-}
-.upload-zone:hover, .upload-zone.drag-over {
-  border-color: var(--accent);
-  background: rgba(0,212,255,0.05);
-}
-.upload-icon { font-size: 40px; margin-bottom: 10px; }
-.upload-text { color: var(--text2); font-size: 13px; }
-.upload-hint { color: var(--text3); font-size: 11px; font-family: var(--font-mono); margin-top: 6px; }
-
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-
-/* TOAST */
-#toast-container {
-  position: fixed;
-  bottom: 20px; right: 20px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.toast {
-  padding: 12px 18px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-family: var(--font-body);
-  animation: slideIn 0.3s ease;
-  max-width: 300px;
-  border-left: 3px solid;
-}
-.toast-success { background: var(--card); border-color: var(--accent3); color: var(--text); }
-.toast-error { background: var(--card); border-color: var(--danger); color: var(--text); }
-.toast-info { background: var(--card); border-color: var(--accent); color: var(--text); }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-/* MODAL */
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-}
-.modal-overlay.active { display: flex; }
-.modal {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 16px;
-  padding: 24px;
-  width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
-  overflow-y: auto;
-  animation: fadeIn 0.2s ease;
-}
-.modal-title {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.modal-close {
-  cursor: pointer;
-  color: var(--text3);
-  font-size: 20px;
-  line-height: 1;
-  transition: color 0.2s;
-}
-.modal-close:hover { color: var(--danger); }
-
-/* PLACEHOLDER MODULES */
-.placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  color: var(--text3);
-  gap: 12px;
-}
-.placeholder-icon { font-size: 60px; opacity: 0.3; }
-.placeholder-text { font-family: var(--font-display); font-size: 18px; letter-spacing: 2px; }
-.placeholder-sub { font-family: var(--font-mono); font-size: 11px; }
-
-/* OTDR TRACE */
-#otdr-trace-container { background: var(--bg); border-radius: 8px; padding: 10px; }
-
-/* MAP */
-#map-container { height: 350px; border-radius: 8px; overflow: hidden; }
-
-/* RESPONSIVE */
-@media (max-width: 600px) {
-  #sidebar { width: 60px; min-width: 60px; }
-  #sidebar .logo-text, #sidebar .logo-sub, #sidebar .nav-label,
-  #sidebar .nav-badge, #sidebar .nav-section, #sidebar .lang-toggle { display: none; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .charts-grid { grid-template-columns: 1fr; }
-}
+/* Divider */
+hr.div{border:none;border-top:1px solid var(--bdr);margin:12px 0}
 </style>
 </head>
 <body>
+<div id="shell">
 
-<div id="app">
-  <!-- SIDEBAR -->
-  <nav id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">🔭</div>
-      <div>
-        <div class="logo-text">OSP Intel</div>
-        <div class="logo-sub">Fibre Network</div>
+  <!-- ▀▀ TOP BAR ▀▀ -->
+  <div id="top">
+    <div class="top-logo">📡</div>
+    <div id="top-title">DASHBOARD</div>
+    <div class="top-r">
+      <div class="top-dot"></div>
+      <div class="lang-sw">
+        <span id="lf" class="on" onclick="setLang('fr')">FR</span>
+        <span id="le" onclick="setLang('en')">EN</span>
       </div>
+      <button class="top-btn" onclick="openSh('sh-imp')">⬆ Import</button>
     </div>
+  </div>
 
-    <div class="nav-section" data-fr="Navigation" data-en="Navigation">Navigation</div>
+  <!-- ▀▀ PAGES ▀▀ -->
+  <div id="pages">
 
-    <div class="nav-item active" onclick="showModule('dashboard')">
-      <span class="nav-icon">📊</span>
-      <span class="nav-label" data-fr="Dashboard" data-en="Dashboard">Dashboard</span>
-    </div>
-    <div class="nav-item" onclick="showModule('incidents')">
-      <span class="nav-icon">⚡</span>
-      <span class="nav-label" data-fr="Incidents" data-en="Incidents">Incidents</span>
-      <span class="nav-badge" id="badge-open">0</span>
-    </div>
-    <div class="nav-item" onclick="showModule('causes')">
-      <span class="nav-icon">🔍</span>
-      <span class="nav-label" data-fr="Analyse Causes" data-en="Root Causes">Analyse Causes</span>
-    </div>
-    <div class="nav-item" onclick="showModule('maintenance')">
-      <span class="nav-icon">🔧</span>
-      <span class="nav-label" data-fr="Plan Maîtrise" data-en="Action Plan">Plan Maîtrise</span>
-    </div>
-    <div class="nav-item" onclick="showModule('otdr')">
-      <span class="nav-icon">📡</span>
-      <span class="nav-label" data-fr="Mesures Optiques" data-en="Optical Measures">Mesures Optiques</span>
-    </div>
+    <!-- ══ PAGE 1 : DASHBOARD ══ -->
+    <div id="pg-dash" class="pg on">
 
-    <div class="sidebar-bottom">
-      <div class="lang-toggle">
-        <div class="lang-btn active" onclick="setLang('fr')">FR</div>
-        <div class="lang-btn" onclick="setLang('en')">EN</div>
+      <div class="fbar">
+        <select class="fsel" id="df-m" onchange="rdash()">
+          <option value="">Tous mois</option>
+          <option value="JANV">Janvier</option><option value="FEVR">Février</option>
+          <option value="MARS">Mars</option><option value="AVRI">Avril</option>
+          <option value="MAI_">Mai</option>
+        </select>
+        <select class="fsel" id="df-z" onchange="rdash()">
+          <option value="">Toutes zones</option>
+          <option>DAKAR</option><option>MIDDLE</option>
+          <option>ZONE_SUD</option><option>ZONE_NORD</option>
+        </select>
+        <select class="fsel" id="df-t" onchange="rdash()">
+          <option value="">Tous types</option>
+          <option>Backbone</option><option>FTTM</option><option>MSAN</option>
+        </select>
+        <div class="fchip" onclick="resetDF()">✕</div>
       </div>
-      <div id="collapse-btn" onclick="toggleSidebar()">◀</div>
+
+      <div class="kpi-grid">
+        <div class="kpi b"><div class="kpi-ico">⚡</div><div class="kpi-v" id="k0">—</div><div class="kpi-l">Total</div><div class="kpi-s" id="k0s">—</div></div>
+        <div class="kpi o"><div class="kpi-ico">⏱</div><div class="kpi-v" id="k1">—</div><div class="kpi-l">MTTR min</div><div class="kpi-s" id="k1s">moy. rétablissement</div></div>
+      </div>
+      <div class="kpi-grid wide">
+        <div class="kpi r"><div class="kpi-ico">🚨</div><div class="kpi-v" id="k2">—</div><div class="kpi-l">OUT SLA</div><div class="kpi-s" id="k2s">—</div></div>
+        <div class="kpi y"><div class="kpi-ico">🔧</div><div class="kpi-v" id="k3">—</div><div class="kpi-l">Plans Open</div><div class="kpi-s" id="k3s">—</div></div>
+        <div class="kpi g"><div class="kpi-ico">📶</div><div class="kpi-v" id="k4">—</div><div class="kpi-l">Backbone</div><div class="kpi-s">P1/P2</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="card-t">🥧 Répartition causes</div></div>
+        <div class="ch-wrap"><canvas id="ch-causes"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div class="card-t">📅 Incidents par mois</div></div>
+        <div class="ch-wrap"><canvas id="ch-monthly"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div class="card-t">🌍 Par zone</div></div>
+        <div class="ch-wrap"><canvas id="ch-zones"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div class="card-t">🔥 Top 10 sites</div></div>
+        <div id="top-sites"></div>
+      </div>
+
     </div>
+
+    <!-- ══ PAGE 2 : INCIDENTS ══ -->
+    <div id="pg-inc" class="pg">
+
+      <div class="sbar">
+        <span style="color:var(--t3);font-size:16px">🔍</span>
+        <input id="isrch" placeholder="Site, ID, ticket…" oninput="rinclist()">
+      </div>
+      <div class="fbar">
+        <select class="fsel" id="if-s" onchange="rinclist()">
+          <option value="">Tous statuts</option>
+          <option value="Open">Open</option><option value="Solde">Soldé</option>
+        </select>
+        <select class="fsel" id="if-l" onchange="rinclist()">
+          <option value="">Tout SLA</option>
+          <option value="OUTSLA">OUT SLA</option><option value="INSLA">IN SLA</option>
+        </select>
+        <select class="fsel" id="if-z" onchange="rinclist()">
+          <option value="">Zone</option>
+          <option>DAKAR</option><option>MIDDLE</option>
+          <option>ZONE_SUD</option><option>ZONE_NORD</option>
+        </select>
+        <div class="fchip" onclick="exportInc()">⬇ Excel</div>
+      </div>
+      <div class="slbl" id="ic-cnt">0 incident</div>
+      <div class="card" style="padding:0"><div id="inc-list"></div></div>
+      <button class="fab" onclick="openIncSh()">＋</button>
+
+    </div>
+
+    <!-- ══ PAGE 3 : CAUSES ══ -->
+    <div id="pg-causes" class="pg">
+
+      <div class="card">
+        <div class="card-h"><div class="card-t">📊 Par famille</div></div>
+        <div id="causes-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div class="card-t">📈 Tendance mensuelle</div></div>
+        <div class="ch-wrap"><canvas id="ch-trend"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div class="card-t">🏗️ Travaux — détail entreprise</div></div>
+        <div class="ch-wrap"><canvas id="ch-trav"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div class="card-t">⚖️ SLA par cause</div></div>
+        <div class="ch-wrap"><canvas id="ch-slac"></canvas></div>
+      </div>
+
+    </div>
+
+    <!-- ══ PAGE 4 : PLANS ══ -->
+    <div id="pg-plans" class="pg">
+
+      <div class="kpi-grid wide">
+        <div class="kpi y"><div class="kpi-ico">📂</div><div class="kpi-v" id="m0">—</div><div class="kpi-l">Open</div></div>
+        <div class="kpi g"><div class="kpi-ico">✅</div><div class="kpi-v" id="m1">—</div><div class="kpi-l">Soldés</div></div>
+        <div class="kpi b"><div class="kpi-ico">📊</div><div class="kpi-v" id="m2">—</div><div class="kpi-l">Taux solde</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div class="card-t">👷 Open par porteur</div></div>
+        <div class="ch-wrap"><canvas id="ch-port"></canvas></div>
+      </div>
+      <div class="fbar">
+        <select class="fsel" id="mf-p" onchange="rplans()">
+          <option value="">Porteur</option>
+          <option>MAG</option><option>ALKAN</option>
+          <option>HAMMER</option><option>MULTELEC</option><option>BBI</option>
+        </select>
+        <select class="fsel" id="mf-s" onchange="rplans()">
+          <option value="">Statut</option>
+          <option value="Open">Open</option><option value="Solde">Soldé</option>
+        </select>
+      </div>
+      <div class="card" style="padding:0"><div id="plans-list"></div></div>
+
+    </div>
+
+    <!-- ══ PAGE 5 : OPTIQUE ══ -->
+    <div id="pg-opt" class="pg">
+      <div id="opt-wrap">
+        <div id="omap"></div>
+        <div id="mpanel">
+          <div class="mp-hdl" onclick="togglePanel()"></div>
+          <div class="mp-peek" onclick="togglePanel()">
+            <span style="font-size:18px">📡</span>
+            <span class="mp-peek-t" id="panel-title">Section optique — appuyer pour ouvrir</span>
+            <span style="color:var(--t3);font-size:18px" id="parr">▲</span>
+          </div>
+          <div class="mp-body" id="mp-body">
+
+            <div class="ctabs" id="otabs">
+              <div class="ct on" onclick="otab('section',this)">📍 Section</div>
+              <div class="ct" onclick="otab('coupure',this)">⚡ Coupure</div>
+              <div class="ct" onclick="otab('sor',this)">📊 OTDR</div>
+              <div class="ct" onclick="otab('hist',this)">🕓 Historique</div>
+            </div>
+
+            <!-- TAB SECTION -->
+            <div id="ot-section">
+              <div class="frow">
+                <div class="fg"><label class="fl">Site A (départ)</label><input class="fi" id="sa" placeholder="ex: MBOUR01"></div>
+                <div class="fg"><label class="fl">GPS A (lat,lng)</label><input class="fi" id="ga" placeholder="14.417,-16.967"></div>
+              </div>
+              <div class="frow">
+                <div class="fg"><label class="fl">Site B (arrivée)</label><input class="fi" id="sb" placeholder="ex: THIES_MUX"></div>
+                <div class="fg"><label class="fl">GPS B (lat,lng)</label><input class="fi" id="gb" placeholder="14.783,-16.917"></div>
+              </div>
+              <div class="fg">
+                <label class="fl">Tracé KMZ / KML</label>
+                <div class="upz" onclick="document.getElementById('kmz-in').click()">
+                  <div class="upz-ico">🗺️</div>
+                  <div class="upz-t">Importer tracé câble</div>
+                  <div class="upz-s">.KMZ · .KML · Google Earth</div>
+                </div>
+                <input type="file" id="kmz-in" accept=".kmz,.kml,.KMZ,.KML" onchange="loadKmz(this)">
+              </div>
+              <div id="sec-info" style="display:none" class="card">
+                <div class="card-b">
+                  <div class="ir"><span class="ir-k">Section</span><span class="ir-v" id="si-name">—</span></div>
+                  <div class="ir"><span class="ir-k">Longueur tracé</span><span class="ir-v" id="si-len">—</span></div>
+                  <div class="ir"><span class="ir-k">Points GPS</span><span class="ir-v" id="si-pts">—</span></div>
+                </div>
+              </div>
+              <button class="btn btn-p btn-full" onclick="applySection()">📍 Afficher sur carte</button>
+            </div>
+
+            <!-- TAB COUPURE -->
+            <div id="ot-coupure" style="display:none">
+              <div class="frow">
+                <div class="fg"><label class="fl">Distance depuis A (km)</label><input class="fi" id="dist-a" type="number" step="0.001" placeholder="9.350"></div>
+                <div class="fg"><label class="fl">Longueur section (km)</label><input class="fi" id="sec-len" type="number" step="0.001" placeholder="42.600"></div>
+              </div>
+              <div class="fg"><label class="fl">Cause probable</label>
+                <select class="fs" id="coup-c">
+                  <option>TRAVAUX</option><option>RONGEURS</option><option>ACCIDENT</option>
+                  <option>CASSURE BRIN</option><option>VANDALISME</option><option>INCENDIE</option><option>INCONNUE</option>
+                </select>
+              </div>
+              <div class="fg"><label class="fl">Note terrain</label><textarea class="ft" id="coup-n" placeholder="Observations…" rows="2"></textarea></div>
+              <button class="btn btn-p btn-full" style="margin-bottom:10px" onclick="locateCoup()">⚡ Localiser point d'impact</button>
+
+              <div id="coup-res" style="display:none" class="card">
+                <div class="card-h"><div class="card-t">📍 Résultat</div></div>
+                <div class="card-b">
+                  <div class="ir"><span class="ir-k">Coordonnées GPS</span><span class="ir-v" id="r-gps">—</span></div>
+                  <div class="ir"><span class="ir-k">Depuis A</span><span class="ir-v" id="r-da">—</span></div>
+                  <div class="ir"><span class="ir-k">Jusqu'à B</span><span class="ir-v" id="r-db">—</span></div>
+                  <div class="ir"><span class="ir-k">Position relative</span><span class="ir-v" id="r-pct">—</span></div>
+                </div>
+                <div style="padding:0 15px 15px">
+                  <button class="btn btn-g btn-full btn-sm" onclick="saveCoup()">💾 Enregistrer cette coupure</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- TAB SOR / OTDR -->
+            <div id="ot-sor" style="display:none">
+              <div class="fg">
+                <label class="fl">Fichier SOR (OTDR)</label>
+                <div class="upz" onclick="document.getElementById('sor-in').click()">
+                  <div class="upz-ico">📊</div>
+                  <div class="upz-t">Importer mesure OTDR</div>
+                  <div class="upz-s">.SOR · IEC 61300-3-35</div>
+                </div>
+                <input type="file" id="sor-in" accept=".sor,.SOR" onchange="loadSor(this)">
+              </div>
+              <div class="fg">
+                <label class="fl">Photo écran OTDR</label>
+                <div class="upz" onclick="document.getElementById('photo-in').click()">
+                  <div class="upz-ico">📷</div>
+                  <div class="upz-t">Photo mesure OTDR</div>
+                  <div class="upz-s">JPG · PNG</div>
+                </div>
+                <input type="file" id="photo-in" accept="image/*" onchange="loadPhoto(this)">
+                <img id="ph-prev" class="ph-prev">
+              </div>
+              <div id="sor-info" style="display:none" class="card">
+                <div class="card-b">
+                  <div class="ir"><span class="ir-k">Fichier</span><span class="ir-v" id="sor-f">—</span></div>
+                  <div class="ir"><span class="ir-k">Événements</span><span class="ir-v" id="sor-n">—</span></div>
+                  <div class="ir"><span class="ir-k">Longueur câble</span><span class="ir-v" id="sor-l">—</span></div>
+                </div>
+              </div>
+              <div id="sor-ch-card" class="card" style="display:none">
+                <div class="card-h"><div class="card-t">📈 Tracé atténuation</div></div>
+                <div class="ch-wrap"><canvas id="ch-otdr"></canvas></div>
+              </div>
+              <div id="sor-evts" class="card" style="display:none;padding:0">
+                <div class="card-h"><div class="card-t">⚡ Événements</div></div>
+                <div id="sor-evts-list"></div>
+              </div>
+            </div>
+
+            <!-- TAB HISTORIQUE -->
+            <div id="ot-hist" style="display:none">
+              <div class="slbl" id="hist-cnt">0 coupure enregistrée</div>
+              <div class="card" style="padding:0"><div id="hist-list"></div></div>
+              <div class="card">
+                <div class="card-h"><div class="card-t">🧠 Zones récurrentes</div></div>
+                <div id="recur-list"></div>
+              </div>
+            </div>
+
+          </div><!-- mp-body -->
+        </div><!-- mpanel -->
+      </div><!-- opt-wrap -->
+    </div>
+
+  </div><!-- pages -->
+
+  <!-- ▀▀ BOTTOM NAV ▀▀ -->
+  <nav id="nav">
+    <div class="ni on" id="ni-dash"   onclick="goPage('dash')"  ><div class="ni-ico">📊</div><div class="ni-lbl">Stats</div></div>
+    <div class="ni"    id="ni-inc"    onclick="goPage('inc')"   ><div class="ni-ico">⚡</div><div class="ni-lbl">Incidents</div><div class="ni-dot" id="ni-dot">0</div></div>
+    <div class="ni"    id="ni-causes" onclick="goPage('causes')"><div class="ni-ico">🔍</div><div class="ni-lbl">Causes</div></div>
+    <div class="ni"    id="ni-plans"  onclick="goPage('plans')" ><div class="ni-ico">🔧</div><div class="ni-lbl">Plans</div></div>
+    <div class="ni"    id="ni-opt"    onclick="goPage('opt')"   ><div class="ni-ico">📡</div><div class="ni-lbl">Optique</div></div>
   </nav>
 
-  <!-- MAIN -->
-  <div id="main">
-    <!-- TOPBAR -->
-    <div id="topbar">
-      <div>
-        <div class="topbar-title" id="topbar-title">DASHBOARD</div>
-        <div class="topbar-subtitle" id="topbar-sub">Vue générale des incidents OSP 2026</div>
-      </div>
-      <div class="topbar-right">
-        <div class="status-dot"></div>
-        <div class="topbar-time" id="clock"></div>
-        <button class="btn btn-primary" onclick="openImportModal()">⬆ <span data-fr="Importer" data-en="Import">Importer</span></button>
-      </div>
-    </div>
+</div><!-- shell -->
 
-    <!-- CONTENT -->
-    <div id="content">
-
-      <!-- ══════════════════════════════════════ -->
-      <!-- MODULE 1 : DASHBOARD                   -->
-      <!-- ══════════════════════════════════════ -->
-      <div id="mod-dashboard" class="module-page active">
-
-        <div class="filters-bar">
-          <select class="filter-select" id="f-mois" onchange="refreshDashboard()">
-            <option value="">— <span data-fr="Tous les mois" data-en="All months">Tous les mois</span></option>
-            <option value="JANVIER">Janvier</option>
-            <option value="FEVRIER">Février</option>
-            <option value="MARS">Mars</option>
-            <option value="AVRIL">Avril</option>
-            <option value="MAI">Mai</option>
-          </select>
-          <select class="filter-select" id="f-zone" onchange="refreshDashboard()">
-            <option value="">— Zone —</option>
-            <option value="DAKAR">DAKAR</option>
-            <option value="MIDDLE">MIDDLE</option>
-            <option value="ZONE_SUD">ZONE SUD</option>
-            <option value="ZONE_NORD">ZONE NORD</option>
-          </select>
-          <select class="filter-select" id="f-type" onchange="refreshDashboard()">
-            <option value="">— Type —</option>
-            <option value="Backbone">Backbone</option>
-            <option value="FTTM">FTTM</option>
-            <option value="MSAN">MSAN</option>
-          </select>
-          <select class="filter-select" id="f-sbc" onchange="refreshDashboard()">
-            <option value="">— SBC —</option>
-            <option value="MAG">MAG</option>
-            <option value="ALKAN">ALKAN</option>
-            <option value="HAMMER">HAMMER</option>
-            <option value="MULTELEC">MULTELEC</option>
-          </select>
-          <button class="btn btn-outline" onclick="resetFilters()">✕ Reset</button>
-        </div>
-
-        <!-- KPIs -->
-        <div class="kpi-grid" id="kpi-grid">
-          <div class="kpi-card blue">
-            <span class="kpi-icon">⚡</span>
-            <div class="kpi-value" id="kpi-total">—</div>
-            <div class="kpi-label" data-fr="Total Incidents" data-en="Total Incidents">Total Incidents</div>
-            <div class="kpi-sub" id="kpi-total-sub">Chargement...</div>
-          </div>
-          <div class="kpi-card orange">
-            <span class="kpi-icon">⏱</span>
-            <div class="kpi-value" id="kpi-mttr">—</div>
-            <div class="kpi-label">MTTR (min)</div>
-            <div class="kpi-sub" id="kpi-mttr-sub">Temps moyen restauration</div>
-          </div>
-          <div class="kpi-card red">
-            <span class="kpi-icon">🚨</span>
-            <div class="kpi-value" id="kpi-outsla">—</div>
-            <div class="kpi-label">OUT SLA</div>
-            <div class="kpi-sub" id="kpi-outsla-sub">Dépassements SLA</div>
-          </div>
-          <div class="kpi-card yellow">
-            <span class="kpi-icon">🔧</span>
-            <div class="kpi-value" id="kpi-open">—</div>
-            <div class="kpi-label" data-fr="Plans Ouverts" data-en="Open Plans">Plans Ouverts</div>
-            <div class="kpi-sub" id="kpi-open-sub">Actions non soldées</div>
-          </div>
-          <div class="kpi-card green">
-            <span class="kpi-icon">📶</span>
-            <div class="kpi-value" id="kpi-backbone">—</div>
-            <div class="kpi-label">Backbone P1/P2</div>
-            <div class="kpi-sub" id="kpi-backbone-sub">Incidents critiques</div>
-          </div>
-        </div>
-
-        <!-- CHARTS ROW 1 -->
-        <div class="charts-grid">
-          <div class="chart-card">
-            <div class="chart-title">📅 <span data-fr="Incidents par mois" data-en="Incidents by month">Incidents par mois</span></div>
-            <canvas id="chart-monthly"></canvas>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">🥧 <span data-fr="Répartition des causes" data-en="Causes breakdown">Répartition des causes</span></div>
-            <canvas id="chart-causes"></canvas>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">🌍 <span data-fr="Incidents par zone" data-en="By zone">Incidents par zone</span></div>
-            <canvas id="chart-zones"></canvas>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">⏳ <span data-fr="MTTR par type" data-en="MTTR by type">MTTR par type</span></div>
-            <canvas id="chart-mttr"></canvas>
-          </div>
-        </div>
-
-        <!-- TOP SITES -->
-        <div class="table-card">
-          <div class="table-header">
-            <div class="table-title">🔥 <span data-fr="Top 10 sites critiques" data-en="Top 10 critical sites">Top 10 sites critiques</span></div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th data-fr="Site" data-en="Site">Site</th>
-                  <th data-fr="Incidents" data-en="Incidents">Incidents</th>
-                  <th data-fr="Durée totale" data-en="Total duration">Durée totale</th>
-                  <th>MTTR</th>
-                  <th>Zone</th>
-                  <th>SLA</th>
-                </tr>
-              </thead>
-              <tbody id="top-sites-body">
-                <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Aucune donnée — Importez un fichier</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div><!-- /mod-dashboard -->
-
-      <!-- ══════════════════════════════════════ -->
-      <!-- MODULE 2 : INCIDENTS                   -->
-      <!-- ══════════════════════════════════════ -->
-      <div id="mod-incidents" class="module-page">
-        <div class="filters-bar">
-          <button class="btn btn-primary" onclick="openIncidentModal()">＋ <span data-fr="Nouvel incident" data-en="New incident">Nouvel incident</span></button>
-          <input type="text" class="form-input" id="search-inc" placeholder="🔍 Rechercher site, ID..." style="max-width:240px" oninput="renderIncidentTable()">
-          <select class="filter-select" id="fi-statut" onchange="renderIncidentTable()">
-            <option value="">— Statut —</option>
-            <option value="Open">Open</option>
-            <option value="Solde">Soldé</option>
-          </select>
-          <select class="filter-select" id="fi-sla" onchange="renderIncidentTable()">
-            <option value="">— SLA —</option>
-            <option value="OUTSLA">OUT SLA</option>
-            <option value="INSLA">IN SLA</option>
-          </select>
-          <button class="btn btn-outline" onclick="exportIncidents()">⬇ Export Excel</button>
-        </div>
-
-        <div class="table-card">
-          <div class="table-header">
-            <div class="table-title">⚡ <span id="inc-count">0</span> <span data-fr="incidents" data-en="incidents">incidents</span></div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID INC</th>
-                  <th>Site</th>
-                  <th>Type</th>
-                  <th>Priorité</th>
-                  <th>Zone</th>
-                  <th>Début</th>
-                  <th>Durée</th>
-                  <th>SLA</th>
-                  <th>Cause</th>
-                  <th>Statut</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="inc-table-body">
-                <tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px">Aucune donnée</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════════════ -->
-      <!-- MODULE 3 : CAUSES                      -->
-      <!-- ══════════════════════════════════════ -->
-      <div id="mod-causes" class="module-page">
-        <div class="charts-grid">
-          <div class="chart-card full-width">
-            <div class="chart-title">📈 <span data-fr="Évolution des causes par mois" data-en="Causes trend by month">Évolution des causes par mois</span></div>
-            <canvas id="chart-causes-trend" style="max-height:260px"></canvas>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">🏗️ <span data-fr="Travaux par entreprise" data-en="Works by company">Travaux par entreprise</span></div>
-            <canvas id="chart-travaux"></canvas>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">⚡ <span data-fr="SLA par famille de cause" data-en="SLA by cause family">SLA par famille de cause</span></div>
-            <canvas id="chart-sla-cause"></canvas>
-          </div>
-        </div>
-
-        <div class="table-card">
-          <div class="table-header">
-            <div class="table-title">📋 <span data-fr="Détail des causes" data-en="Causes detail">Détail des causes</span></div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th data-fr="Famille" data-en="Family">Famille</th>
-                  <th data-fr="Nb incidents" data-en="Count">Nb</th>
-                  <th>%</th>
-                  <th>MTTR moy.</th>
-                  <th>OUT SLA</th>
-                  <th data-fr="Tendance" data-en="Trend">Tendance</th>
-                </tr>
-              </thead>
-              <tbody id="causes-table-body">
-                <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Aucune donnée</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════════════ -->
-      <!-- MODULE 4 : PLAN DE MAÎTRISE            -->
-      <!-- ══════════════════════════════════════ -->
-      <div id="mod-maintenance" class="module-page">
-        <div class="kpi-grid">
-          <div class="kpi-card yellow">
-            <span class="kpi-icon">📂</span>
-            <div class="kpi-value" id="maint-open">—</div>
-            <div class="kpi-label">Plans Open</div>
-          </div>
-          <div class="kpi-card green">
-            <span class="kpi-icon">✅</span>
-            <div class="kpi-value" id="maint-solde">—</div>
-            <div class="kpi-label">Plans Soldés</div>
-          </div>
-          <div class="kpi-card blue">
-            <span class="kpi-icon">📊</span>
-            <div class="kpi-value" id="maint-rate">—</div>
-            <div class="kpi-label">Taux Solde</div>
-          </div>
-        </div>
-
-        <div class="charts-grid">
-          <div class="chart-card">
-            <div class="chart-title">👷 <span data-fr="Open par porteur" data-en="Open by owner">Open par porteur</span></div>
-            <canvas id="chart-porteur"></canvas>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">📅 <span data-fr="Statut par semaine" data-en="Status by week">Statut par semaine</span></div>
-            <canvas id="chart-maint-week"></canvas>
-          </div>
-        </div>
-
-        <div class="table-card">
-          <div class="table-header">
-            <div class="table-title">🔧 Plans de maîtrise</div>
-            <div style="display:flex;gap:8px">
-              <select class="filter-select" id="fm-porteur" onchange="renderMaintenanceTable()">
-                <option value="">— Porteur —</option>
-                <option>MAG</option><option>ALKAN</option>
-                <option>HAMMER</option><option>MULTELEC</option><option>BBI</option>
-              </select>
-              <select class="filter-select" id="fm-statut" onchange="renderMaintenanceTable()">
-                <option value="">— Statut —</option>
-                <option value="Open">Open</option>
-                <option value="Solde">Soldé</option>
-              </select>
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Site</th>
-                  <th>Plan de maîtrise</th>
-                  <th>Porteur</th>
-                  <th>Statut</th>
-                  <th>Cause</th>
-                  <th>Durée (min)</th>
-                </tr>
-              </thead>
-              <tbody id="maint-table-body">
-                <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Aucune donnée</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════════════ -->
-      <!-- MODULE 5 : MESURES OPTIQUES            -->
-      <!-- ══════════════════════════════════════ -->
-      <div id="mod-otdr" class="module-page">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
-          <!-- SOR Upload -->
-          <div class="chart-card">
-            <div class="chart-title">📡 Import fichier SOR (OTDR)</div>
-            <div class="upload-zone" id="sor-zone" onclick="document.getElementById('sor-input').click()" 
-                 ondragover="event.preventDefault();this.classList.add('drag-over')"
-                 ondragleave="this.classList.remove('drag-over')"
-                 ondrop="handleSorDrop(event)">
-              <div class="upload-icon">📊</div>
-              <div class="upload-text" data-fr="Déposer votre fichier .SOR ici" data-en="Drop your .SOR file here">Déposer votre fichier .SOR ici</div>
-              <div class="upload-hint">IEC 61300-3-35 • Bellcore SR-4731</div>
-            </div>
-            <input type="file" id="sor-input" accept=".sor,.SOR" style="display:none" onchange="handleSorFile(this)">
-            <div id="sor-info" style="margin-top:12px;display:none">
-              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2)" id="sor-meta"></div>
-            </div>
-          </div>
-          <!-- KMZ Upload -->
-          <div class="chart-card">
-            <div class="chart-title">🗺️ Import section KMZ</div>
-            <div class="upload-zone" id="kmz-zone" onclick="document.getElementById('kmz-input').click()"
-                 ondragover="event.preventDefault();this.classList.add('drag-over')"
-                 ondragleave="this.classList.remove('drag-over')"
-                 ondrop="handleKmzDrop(event)">
-              <div class="upload-icon">🌍</div>
-              <div class="upload-text" data-fr="Déposer votre fichier .KMZ ici" data-en="Drop your .KMZ file here">Déposer votre fichier .KMZ ici</div>
-              <div class="upload-hint">.KMZ • .KML • Google Earth</div>
-            </div>
-            <input type="file" id="kmz-input" accept=".kmz,.kml,.KMZ,.KML" style="display:none" onchange="handleKmzFile(this)">
-          </div>
-        </div>
-
-        <!-- OTDR Trace Chart -->
-        <div class="chart-card" style="margin-bottom:14px">
-          <div class="chart-title">📈 <span data-fr="Tracé OTDR — Atténuation vs Distance" data-en="OTDR Trace — Attenuation vs Distance">Tracé OTDR — Atténuation vs Distance</span></div>
-          <canvas id="chart-otdr" style="max-height:280px"></canvas>
-        </div>
-
-        <!-- Events Table -->
-        <div class="table-card" style="margin-bottom:14px">
-          <div class="table-header">
-            <div class="table-title">⚡ <span data-fr="Événements détectés" data-en="Detected events">Événements détectés</span></div>
-            <button class="btn btn-outline" onclick="exportOtdrReport()" id="btn-export-otdr" disabled>⬇ Export PDF</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th data-fr="Distance (km)" data-en="Distance (km)">Distance (km)</th>
-                  <th data-fr="Type" data-en="Type">Type</th>
-                  <th data-fr="Perte (dB)" data-en="Loss (dB)">Perte (dB)</th>
-                  <th data-fr="Réflexion (dB)" data-en="Reflection (dB)">Réflexion (dB)</th>
-                  <th data-fr="Statut" data-en="Status">Statut</th>
-                </tr>
-              </thead>
-              <tbody id="otdr-events-body">
-                <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Aucun fichier SOR chargé</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Map -->
-        <div class="chart-card">
-          <div class="chart-title">🗺️ <span data-fr="Carte section optique" data-en="Optical section map">Carte section optique</span></div>
-          <div id="map-container"></div>
-        </div>
-      </div>
-
-    </div><!-- /content -->
-  </div><!-- /main -->
-</div><!-- /app -->
-
-<!-- IMPORT MODAL -->
-<div class="modal-overlay" id="import-modal">
-  <div class="modal">
-    <div class="modal-title">
-      <span>⬆ <span data-fr="Importer des données" data-en="Import data">Importer des données</span></span>
-      <span class="modal-close" onclick="closeModal('import-modal')">✕</span>
-    </div>
-    <div class="upload-zone" id="import-zone" onclick="document.getElementById('import-input').click()"
-         ondragover="event.preventDefault();this.classList.add('drag-over')"
-         ondragleave="this.classList.remove('drag-over')"
-         ondrop="handleImportDrop(event)">
-      <div class="upload-icon">📂</div>
-      <div class="upload-text" data-fr="Déposer votre fichier ici" data-en="Drop your file here">Déposer votre fichier ici</div>
-      <div class="upload-hint">Excel (.xlsx) • PDF</div>
-    </div>
-    <input type="file" id="import-input" accept=".xlsx,.xls,.pdf" style="display:none" onchange="handleImportFile(this)">
-    <div id="import-progress" style="display:none;margin-top:16px">
-      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);margin-bottom:8px" id="import-status">Chargement...</div>
-      <div class="progress-bar"><div class="progress-fill" id="import-bar" style="width:0%"></div></div>
-    </div>
+<!-- ══ SHEET : IMPORT ══ -->
+<div class="sh-ov" id="ov-imp" onclick="closeSh('sh-imp')"></div>
+<div class="sh" id="sh-imp">
+  <div class="sh-hdl"></div>
+  <div class="sh-tit">⬆ Importer données<span class="sh-x" onclick="closeSh('sh-imp')">✕</span></div>
+  <div class="upz" onclick="document.getElementById('imp-in').click()">
+    <div class="upz-ico">📂</div>
+    <div class="upz-t">Excel (.xlsx) ou PDF</div>
+    <div class="upz-s">Suivi coupure FO 2026 — colonnes auto-détectées</div>
+  </div>
+  <input type="file" id="imp-in" accept=".xlsx,.xls,.pdf" onchange="doImport(this)">
+  <div id="imp-pg" style="display:none">
+    <div style="font-size:13px;color:var(--t2);margin-bottom:6px" id="imp-st">Chargement…</div>
+    <div class="pb"><div class="pf" id="imp-pf" style="width:0%"></div></div>
   </div>
 </div>
 
-<!-- INCIDENT MODAL -->
-<div class="modal-overlay" id="incident-modal">
-  <div class="modal">
-    <div class="modal-title">
-      <span id="inc-modal-title">＋ Nouvel incident</span>
-      <span class="modal-close" onclick="closeModal('incident-modal')">✕</span>
-    </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">ID INC</label>
-        <input class="form-input" id="f-id-inc" placeholder="OSP_01012026_1">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ticket ID</label>
-        <input class="form-input" id="f-ticket" placeholder="CM-20260101-00001234">
-      </div>
-      <div class="form-group">
-        <label class="form-label" data-fr="Nom du site" data-en="Site name">Nom du site</label>
-        <input class="form-input" id="f-site" placeholder="SALY_AERODROME">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Section</label>
-        <input class="form-input" id="f-section" placeholder="Mbour - Thies">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Type</label>
-        <select class="form-select" id="f-type-inc">
-          <option value="FTTM">FTTM</option>
-          <option value="Backbone">Backbone</option>
-          <option value="MSAN">MSAN</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Priorité</label>
-        <select class="form-select" id="f-priorite">
-          <option value="P1">P1</option>
-          <option value="P2">P2</option>
-          <option value="P3" selected>P3</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Zone</label>
-        <select class="form-select" id="f-zone-inc">
-          <option value="DAKAR">DAKAR</option>
-          <option value="MIDDLE">MIDDLE</option>
-          <option value="ZONE_SUD">ZONE SUD</option>
-          <option value="ZONE_NORD">ZONE NORD</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">SBC</label>
-        <select class="form-select" id="f-sbc-inc">
-          <option value="MAG">MAG</option>
-          <option value="ALKAN">ALKAN</option>
-          <option value="HAMMER">HAMMER</option>
-          <option value="MULTELEC">MULTELEC</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Date/Heure début</label>
-        <input class="form-input" type="datetime-local" id="f-debut">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Date/Heure fin</label>
-        <input class="form-input" type="datetime-local" id="f-fin">
-      </div>
-      <div class="form-group">
-        <label class="form-label">VR (délai)</label>
-        <select class="form-select" id="f-vr">
-          <option value="VR4H">VR4H</option>
-          <option value="VR8H">VR8H</option>
-          <option value="VR16H">VR16H</option>
-          <option value="VR24H">VR24H</option>
-          <option value="VRPLUS">VRPLUS</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Famille de cause</label>
-        <select class="form-select" id="f-cause-fam">
-          <option>TRAVAUX</option>
-          <option>TRAVAUX SONATEL</option>
-          <option>RONGEURS</option>
-          <option>ACCIDENT</option>
-          <option>CASSURE BRIN</option>
-          <option>VANDALISME</option>
-          <option>INCENDIE</option>
-          <option>INCONNUE</option>
-        </select>
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label class="form-label">Cause détaillée</label>
-        <textarea class="form-textarea" id="f-cause-detail" placeholder="Description de la cause..."></textarea>
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label class="form-label">Plan de maîtrise</label>
-        <textarea class="form-textarea" id="f-plan" placeholder="Action corrective à mener..."></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Porteur</label>
-        <select class="form-select" id="f-porteur">
-          <option value="MAG">MAG</option>
-          <option value="ALKAN">ALKAN</option>
-          <option value="HAMMER">HAMMER</option>
-          <option value="MULTELEC">MULTELEC</option>
-          <option value="BBI">BBI</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Statut</label>
-        <select class="form-select" id="f-statut-inc">
-          <option value="Open">Open</option>
-          <option value="Solde">Soldé</option>
-        </select>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
-      <button class="btn btn-outline" onclick="closeModal('incident-modal')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveIncident()">💾 Sauvegarder</button>
-    </div>
+<!-- ══ SHEET : INCIDENT ══ -->
+<div class="sh-ov" id="ov-inc" onclick="closeSh('sh-inc')"></div>
+<div class="sh" id="sh-inc">
+  <div class="sh-hdl"></div>
+  <div class="sh-tit"><span id="sh-inc-t">＋ Nouvel incident</span><span class="sh-x" onclick="closeSh('sh-inc')">✕</span></div>
+
+  <div class="fg"><label class="fl">ID Incident</label><input class="fi" id="fi-id" placeholder="OSP_01012026_1"></div>
+  <div class="fg"><label class="fl">Ticket ID</label><input class="fi" id="fi-tk" placeholder="CM-20260101-00001234"></div>
+  <div class="fg"><label class="fl">Nom du site</label><input class="fi" id="fi-si" placeholder="SALY_AERODROME"></div>
+  <div class="fg"><label class="fl">Section / BTS</label><input class="fi" id="fi-se" placeholder="Mbour - Thies MUX"></div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Type</label><select class="fs" id="fi-ty"><option>FTTM</option><option>Backbone</option><option>MSAN</option></select></div>
+    <div class="fg"><label class="fl">Priorité</label><select class="fs" id="fi-pr"><option>P1</option><option>P2</option><option selected>P3</option></select></div>
   </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Zone</label><select class="fs" id="fi-zo"><option>DAKAR</option><option>MIDDLE</option><option>ZONE_SUD</option><option>ZONE_NORD</option></select></div>
+    <div class="fg"><label class="fl">SBC</label><select class="fs" id="fi-sb"><option>MAG</option><option>ALKAN</option><option>HAMMER</option><option>MULTELEC</option></select></div>
+  </div>
+  <div class="fg"><label class="fl">Date/Heure début</label><input class="fi" type="datetime-local" id="fi-db"></div>
+  <div class="fg"><label class="fl">Date/Heure fin</label><input class="fi" type="datetime-local" id="fi-fi"></div>
+  <div class="frow">
+    <div class="fg"><label class="fl">VR délai</label><select class="fs" id="fi-vr"><option>VR4H</option><option>VR8H</option><option>VR16H</option><option>VR24H</option><option>VRPLUS</option></select></div>
+    <div class="fg"><label class="fl">Cause famille</label><select class="fs" id="fi-cf"><option>TRAVAUX</option><option>TRAVAUX SONATEL</option><option>RONGEURS</option><option>ACCIDENT</option><option>CASSURE BRIN</option><option>VANDALISME</option><option>INCENDIE</option><option>INCONNUE</option></select></div>
+  </div>
+  <div class="fg"><label class="fl">Cause détaillée</label><textarea class="ft" id="fi-cd" placeholder="Description de la cause…" rows="2"></textarea></div>
+  <div class="fg"><label class="fl">Plan de maîtrise</label><textarea class="ft" id="fi-pl" placeholder="Action corrective…" rows="2"></textarea></div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Porteur</label><select class="fs" id="fi-po"><option>MAG</option><option>ALKAN</option><option>HAMMER</option><option>MULTELEC</option><option>BBI</option></select></div>
+    <div class="fg"><label class="fl">Statut</label><select class="fs" id="fi-st"><option>Open</option><option>Solde</option></select></div>
+  </div>
+  <button class="btn btn-p btn-full" onclick="saveInc()" style="margin-top:4px">💾 Sauvegarder</button>
+  <div style="height:16px"></div>
 </div>
 
-<div id="toast-container"></div>
+<div id="toasts"></div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-// DATA STORE
-// ═══════════════════════════════════════════════════════════
-let incidents = JSON.parse(localStorage.getItem('osp_incidents') || '[]');
-let editingId = null;
-let currentLang = localStorage.getItem('osp_lang') || 'fr';
-let charts = {};
-let map = null;
-let otdrChart = null;
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let INC   = JSON.parse(localStorage.getItem('osp_i') || '[]');
+let COUPS = JSON.parse(localStorage.getItem('osp_c') || '[]');
+let editId = null;
+let lang = localStorage.getItem('osp_lang') || 'fr';
+let CH = {};
+let oMap = null;
+let sorCh = null;
+let secLayer = null;
+let mrkLayer = null;
+let impactMrk = null;
+let kmzPts = [];
 
-// ═══════════════════════════════════════════════════════════
-// CLOCK
-// ═══════════════════════════════════════════════════════════
-function updateClock() {
-  const now = new Date();
-  document.getElementById('clock').textContent =
-    now.toLocaleDateString('fr-SN') + ' ' + now.toLocaleTimeString('fr-SN', {hour:'2-digit',minute:'2-digit'});
-}
-setInterval(updateClock, 1000);
-updateClock();
+const PAGES = {dash:'Stats',inc:'Incidents',causes:'Causes',plans:'Plans',opt:'Optique'};
+const VRM = {VR4H:240,VR8H:480,VR16H:960,VR24H:1440,VRPLUS:9999};
 
-// ═══════════════════════════════════════════════════════════
-// NAVIGATION
-// ═══════════════════════════════════════════════════════════
-const modules = {
-  dashboard: { fr: 'DASHBOARD', en: 'DASHBOARD', sub_fr: 'Vue générale des incidents OSP 2026', sub_en: 'OSP incidents overview 2026' },
-  incidents: { fr: 'INCIDENTS', en: 'INCIDENTS', sub_fr: 'Gestion des incidents curatifs', sub_en: 'Corrective incident management' },
-  causes: { fr: 'ANALYSE CAUSES', en: 'ROOT CAUSES', sub_fr: 'Analyse et répartition des causes', sub_en: 'Cause analysis and distribution' },
-  maintenance: { fr: 'PLAN DE MAÎTRISE', en: 'ACTION PLAN', sub_fr: 'Suivi des plans de maîtrise', sub_en: 'Action plan tracking' },
-  otdr: { fr: 'MESURES OPTIQUES', en: 'OPTICAL MEASURES', sub_fr: 'Import SOR / KMZ — Analyse OTDR', sub_en: 'SOR / KMZ Import — OTDR Analysis' }
-};
-
-function showModule(name) {
-  document.querySelectorAll('.module-page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('mod-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) {
-      n.classList.add('active');
-    }
-  });
-  const m = modules[name];
-  document.getElementById('topbar-title').textContent = m[currentLang] || m.fr;
-  document.getElementById('topbar-sub').textContent = m['sub_' + currentLang] || m.sub_fr;
-  if (name === 'dashboard') refreshDashboard();
-  if (name === 'causes') refreshCauses();
-  if (name === 'maintenance') refreshMaintenance();
-  if (name === 'otdr' && !map) initMap();
+// ════════════════════════════════════════
+// NAV
+// ════════════════════════════════════════
+function goPage(p) {
+  document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));
+  document.getElementById('pg-'+p).classList.add('on');
+  document.getElementById('ni-'+p).classList.add('on');
+  document.getElementById('top-title').textContent = PAGES[p].toUpperCase();
+  if(p==='dash')   rdash();
+  if(p==='causes') rcauses();
+  if(p==='plans')  rplans();
+  if(p==='opt')    initMap();
 }
 
-function toggleSidebar() {
-  const s = document.getElementById('sidebar');
-  const btn = document.getElementById('collapse-btn');
-  s.classList.toggle('collapsed');
-  btn.textContent = s.classList.contains('collapsed') ? '▶' : '◀';
-}
-
-// ═══════════════════════════════════════════════════════════
-// LANGUAGE
-// ═══════════════════════════════════════════════════════════
-function setLang(lang) {
-  currentLang = lang;
-  localStorage.setItem('osp_lang', lang);
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.lang-btn').forEach(b => {
-    if (b.textContent === lang.toUpperCase()) b.classList.add('active');
-  });
-  document.querySelectorAll('[data-fr]').forEach(el => {
-    el.textContent = lang === 'en' ? (el.dataset.en || el.dataset.fr) : el.dataset.fr;
+// ════════════════════════════════════════
+// SHEETS
+// ════════════════════════════════════════
+function openSh(id) {
+  const ov = 'ov-'+id.replace('sh-','');
+  requestAnimationFrame(()=>{
+    document.getElementById(ov)?.classList.add('on');
+    document.getElementById(id).classList.add('on');
   });
 }
-
-// ═══════════════════════════════════════════════════════════
-// MODALS
-// ═══════════════════════════════════════════════════════════
-function openImportModal() { document.getElementById('import-modal').classList.add('active'); }
-function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-function openIncidentModal(id) {
-  editingId = id || null;
-  document.getElementById('inc-modal-title').textContent = id ? '✏️ Modifier incident' : '＋ Nouvel incident';
-  if (id) {
-    const inc = incidents.find(i => i.id === id);
-    if (inc) {
-      document.getElementById('f-id-inc').value = inc.idInc || '';
-      document.getElementById('f-ticket').value = inc.ticket || '';
-      document.getElementById('f-site').value = inc.site || '';
-      document.getElementById('f-section').value = inc.section || '';
-      document.getElementById('f-type-inc').value = inc.type || 'FTTM';
-      document.getElementById('f-priorite').value = inc.priorite || 'P3';
-      document.getElementById('f-zone-inc').value = inc.zone || 'DAKAR';
-      document.getElementById('f-sbc-inc').value = inc.sbc || 'MAG';
-      document.getElementById('f-debut').value = inc.debut || '';
-      document.getElementById('f-fin').value = inc.fin || '';
-      document.getElementById('f-vr').value = inc.vr || 'VR8H';
-      document.getElementById('f-cause-fam').value = inc.causeFamille || 'TRAVAUX';
-      document.getElementById('f-cause-detail').value = inc.causeDetail || '';
-      document.getElementById('f-plan').value = inc.plan || '';
-      document.getElementById('f-porteur').value = inc.porteur || 'MAG';
-      document.getElementById('f-statut-inc').value = inc.statut || 'Open';
-    }
-  } else {
-    document.getElementById('f-debut').value = new Date().toISOString().slice(0,16);
-    document.getElementById('f-id-inc').value = '';
-    document.getElementById('f-ticket').value = '';
-    document.getElementById('f-site').value = '';
-    document.getElementById('f-section').value = '';
-    document.getElementById('f-cause-detail').value = '';
-    document.getElementById('f-plan').value = '';
-  }
-  document.getElementById('incident-modal').classList.add('active');
+function closeSh(id) {
+  const ov = 'ov-'+id.replace('sh-','');
+  document.getElementById(id).classList.remove('on');
+  document.getElementById(ov)?.classList.remove('on');
 }
 
-// ═══════════════════════════════════════════════════════════
-// SAVE INCIDENT
-// ═══════════════════════════════════════════════════════════
-function saveIncident() {
-  const debut = document.getElementById('f-debut').value;
-  const fin = document.getElementById('f-fin').value;
-  let duree = 0;
-  if (debut && fin) {
-    duree = Math.round((new Date(fin) - new Date(debut)) / 60000);
-  }
-  const vrMap = { VR4H: 240, VR8H: 480, VR16H: 960, VR24H: 1440, VRPLUS: 9999 };
-  const vr = document.getElementById('f-vr').value;
-  const sla = duree > 0 ? (duree <= (vrMap[vr] || 480) ? 'INSLA' : 'OUTSLA') : 'INSLA';
+// ════════════════════════════════════════
+// LANG
+// ════════════════════════════════════════
+function setLang(l) {
+  lang=l; localStorage.setItem('osp_lang',l);
+  document.getElementById('lf').classList.toggle('on',l==='fr');
+  document.getElementById('le').classList.toggle('on',l==='en');
+}
 
+// ════════════════════════════════════════
+// PERSIST
+// ════════════════════════════════════════
+function save() {
+  localStorage.setItem('osp_i', JSON.stringify(INC));
+  const n = INC.filter(i=>i.statut==='Open').length;
+  const dot = document.getElementById('ni-dot');
+  dot.textContent = n;
+  dot.classList.toggle('on', n>0);
+}
+function saveC() { localStorage.setItem('osp_c', JSON.stringify(COUPS)); }
+
+// ════════════════════════════════════════
+// INCIDENT CRUD
+// ════════════════════════════════════════
+function openIncSh(id) {
+  editId = id||null;
+  document.getElementById('sh-inc-t').textContent = id ? '✏️ Modifier' : '＋ Nouvel incident';
+  const v = id ? INC.find(x=>x.id===id) : null;
+  document.getElementById('fi-id').value = v?.idInc||'';
+  document.getElementById('fi-tk').value = v?.ticket||'';
+  document.getElementById('fi-si').value = v?.site||'';
+  document.getElementById('fi-se').value = v?.section||'';
+  document.getElementById('fi-ty').value = v?.type||'FTTM';
+  document.getElementById('fi-pr').value = v?.priorite||'P3';
+  document.getElementById('fi-zo').value = v?.zone||'DAKAR';
+  document.getElementById('fi-sb').value = v?.sbc||'MAG';
+  document.getElementById('fi-db').value = v?.debut||new Date().toISOString().slice(0,16);
+  document.getElementById('fi-fi').value = v?.fin||'';
+  document.getElementById('fi-vr').value = v?.vr||'VR8H';
+  document.getElementById('fi-cf').value = v?.causeFamille||'TRAVAUX';
+  document.getElementById('fi-cd').value = v?.causeDetail||'';
+  document.getElementById('fi-pl').value = v?.plan||'';
+  document.getElementById('fi-po').value = v?.porteur||'MAG';
+  document.getElementById('fi-st').value = v?.statut||'Open';
+  openSh('sh-inc');
+}
+
+function saveInc() {
+  const debut = document.getElementById('fi-db').value;
+  const fin   = document.getElementById('fi-fi').value;
+  const duree = (debut&&fin) ? Math.round((new Date(fin)-new Date(debut))/60000) : 0;
+  const vr    = document.getElementById('fi-vr').value;
+  const sla   = duree>0 ? (duree<=(VRM[vr]||480)?'INSLA':'OUTSLA') : 'INSLA';
   const inc = {
-    id: editingId || 'INC_' + Date.now(),
-    idInc: document.getElementById('f-id-inc').value,
-    ticket: document.getElementById('f-ticket').value,
-    site: document.getElementById('f-site').value,
-    section: document.getElementById('f-section').value,
-    type: document.getElementById('f-type-inc').value,
-    priorite: document.getElementById('f-priorite').value,
-    zone: document.getElementById('f-zone-inc').value,
-    sbc: document.getElementById('f-sbc-inc').value,
-    debut, fin, duree,
-    vr, sla,
-    causeFamille: document.getElementById('f-cause-fam').value,
-    causeDetail: document.getElementById('f-cause-detail').value,
-    plan: document.getElementById('f-plan').value,
-    porteur: document.getElementById('f-porteur').value,
-    statut: document.getElementById('f-statut-inc').value,
+    id: editId||'I'+Date.now(),
+    idInc:   document.getElementById('fi-id').value,
+    ticket:  document.getElementById('fi-tk').value,
+    site:    document.getElementById('fi-si').value||'Site_'+Date.now(),
+    section: document.getElementById('fi-se').value,
+    type:    document.getElementById('fi-ty').value,
+    priorite:document.getElementById('fi-pr').value,
+    zone:    document.getElementById('fi-zo').value,
+    sbc:     document.getElementById('fi-sb').value,
+    debut, fin, duree, vr, sla,
+    causeFamille:document.getElementById('fi-cf').value,
+    causeDetail: document.getElementById('fi-cd').value,
+    plan:        document.getElementById('fi-pl').value,
+    porteur:     document.getElementById('fi-po').value,
+    statut:      document.getElementById('fi-st').value,
   };
-
-  if (editingId) {
-    const idx = incidents.findIndex(i => i.id === editingId);
-    if (idx >= 0) incidents[idx] = inc;
-  } else {
-    incidents.push(inc);
-  }
-  saveData();
-  closeModal('incident-modal');
-  renderIncidentTable();
-  refreshDashboard();
-  toast('Incident sauvegardé ✓', 'success');
+  if(editId){ const i=INC.findIndex(x=>x.id===editId); if(i>=0)INC[i]=inc; }
+  else INC.push(inc);
+  save(); closeSh('sh-inc');
+  rinclist(); rdash();
+  toast('Incident sauvegardé ✓','s');
 }
 
-function deleteIncident(id) {
-  if (!confirm('Supprimer cet incident ?')) return;
-  incidents = incidents.filter(i => i.id !== id);
-  saveData();
-  renderIncidentTable();
-  refreshDashboard();
-  toast('Incident supprimé', 'info');
+function delInc(id) {
+  if(!confirm('Supprimer cet incident ?')) return;
+  INC=INC.filter(x=>x.id!==id);
+  save(); rinclist(); rdash();
+  toast('Supprimé','i');
 }
 
-function saveData() {
-  localStorage.setItem('osp_incidents', JSON.stringify(incidents));
-  const openCount = incidents.filter(i => i.statut === 'Open').length;
-  document.getElementById('badge-open').textContent = openCount;
-}
-
-// ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════════
 // IMPORT EXCEL
-// ═══════════════════════════════════════════════════════════
-function handleImportDrop(e) {
-  e.preventDefault();
-  document.getElementById('import-zone').classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) processImportFile(file);
-}
-function handleImportFile(input) {
-  if (input.files[0]) processImportFile(input.files[0]);
-}
-
-function processImportFile(file) {
-  const ext = file.name.split('.').pop().toLowerCase();
-  document.getElementById('import-progress').style.display = 'block';
-  document.getElementById('import-status').textContent = 'Lecture du fichier...';
-  document.getElementById('import-bar').style.width = '20%';
-
-  if (ext === 'xlsx' || ext === 'xls') {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        document.getElementById('import-bar').style.width = '50%';
-        const wb = XLSX.read(e.target.result, {type:'binary'});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws, {defval:''});
-        document.getElementById('import-bar').style.width = '80%';
-        const parsed = parseExcelData(data);
-        incidents = [...incidents, ...parsed];
-        saveData();
-        document.getElementById('import-bar').style.width = '100%';
-        document.getElementById('import-status').textContent = `✓ ${parsed.length} incidents importés`;
-        setTimeout(() => {
-          closeModal('import-modal');
-          refreshDashboard();
-          renderIncidentTable();
-          toast(`${parsed.length} incidents importés avec succès`, 'success');
-        }, 800);
-      } catch(err) {
-        document.getElementById('import-status').textContent = 'Erreur: ' + err.message;
-        toast('Erreur import: ' + err.message, 'error');
-      }
-    };
-    reader.readAsBinaryString(file);
-  } else {
-    document.getElementById('import-status').textContent = 'Format PDF — parsing en cours...';
-    toast('PDF détecté — utilisez de préférence le format Excel', 'info');
-    document.getElementById('import-bar').style.width = '100%';
-  }
+// ════════════════════════════════════════
+function doImport(input) {
+  const file=input.files[0]; if(!file) return;
+  const pg=document.getElementById('imp-pg');
+  const st=document.getElementById('imp-st');
+  const pf=document.getElementById('imp-pf');
+  pg.style.display='block'; st.textContent='Lecture…'; pf.style.width='15%';
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      pf.style.width='50%';
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      pf.style.width='80%';
+      const parsed=parseXls(rows);
+      INC=[...INC,...parsed];
+      save(); pf.style.width='100%';
+      st.textContent=`✓ ${parsed.length} incidents importés`;
+      setTimeout(()=>{
+        closeSh('sh-imp'); rdash(); rinclist();
+        toast(`${parsed.length} incidents importés`,'s');
+      },700);
+    }catch(err){
+      st.textContent='❌ '+err.message;
+      toast('Erreur: '+err.message,'e');
+    }
+  };
+  r.readAsBinaryString(file);
 }
 
-function parseExcelData(rows) {
-  const result = [];
-  rows.forEach((row, idx) => {
-    const keys = Object.keys(row).map(k => k.toLowerCase().trim());
-    const get = (patterns) => {
-      for (const p of patterns) {
-        const k = Object.keys(row).find(k => k.toLowerCase().includes(p));
-        if (k && row[k] !== '') return String(row[k]).trim();
+function parseXls(rows) {
+  return rows.map((row,idx)=>{
+    const g=(...ps)=>{
+      for(const p of ps){
+        const k=Object.keys(row).find(k=>k.toLowerCase().includes(p));
+        if(k&&row[k]!=='') return String(row[k]).trim();
       }
       return '';
     };
-
-    const debut = get(['debut','start','heure debut','date et heure debut']);
-    const fin = get(['fin','end','heure fin','date et heure fin']);
-    let duree = parseInt(get(['duree','duration','durée'])) || 0;
-    if (!duree && debut && fin) {
-      try { duree = Math.round((new Date(fin) - new Date(debut)) / 60000); } catch(e) {}
-    }
-
-    const vr = get(['vr']) || 'VR8H';
-    const vrMap = { VR4H: 240, VR8H: 480, VR16H: 960, VR24H: 1440, VRPLUS: 9999 };
-    const slaRaw = get(['sla en fonction','sla priorit','sla_p']) || get(['sla']);
-    const sla = slaRaw.includes('OUT') ? 'OUTSLA' : 'INSLA';
-
-    const type = get(['type backh','type']) || 'FTTM';
-    const site = get(['noms de site','nom de site','site','bts']) || get(['section']) || 'Site_' + idx;
-
-    result.push({
-      id: 'IMP_' + Date.now() + '_' + idx,
-      idInc: get(['id inc','id_inc','osp_','inc_num']) || '',
-      ticket: get(['ticket']) || '',
-      site,
-      section: get(['section','bts/msan']) || '',
-      type: type.includes('Backbone') || type.includes('BACKBONE') ? 'Backbone' :
-            type.includes('MSAN') ? 'MSAN' : 'FTTM',
-      priorite: get(['priorit','priority','site prior']) || 'P3',
-      zone: get(['zone']) || 'DAKAR',
-      sbc: get(['sbc']) || '',
-      mois: get(['mois','month']) || '',
-      semaine: get(['semaine','week']) || '',
-      debut, fin, duree, vr, sla,
-      causeFamille: get(['repartition','famille de cause','famille']) || get(['cause']).toUpperCase() || 'TRAVAUX',
-      causeDetail: get(['causes','cause detail']) || '',
-      plan: get(['plan de maitrise','plan']) || '',
-      porteur: get(['porteur']) || '',
-      statut: get(['satatut','statut','status']) || 'Solde',
-    });
-  });
-  return result.filter(r => r.site);
+    const debut=g('debut','heure debut','date et heure debut');
+    const fin=g('fin','heure fin','date et heure fin');
+    let duree=parseInt(g('duree','durée'))||0;
+    if(!duree&&debut&&fin) try{duree=Math.round((new Date(fin)-new Date(debut))/60000);}catch(e){}
+    const vr=g('vr')||'VR8H';
+    const slaR=g('sla en fonction','sla priorit')||g('sla');
+    const sla=slaR.includes('OUT')?'OUTSLA':'INSLA';
+    const typeR=g('type backh','type')||'FTTM';
+    const site=g('noms de site','nom de site','site','bts')||g('section')||'Site_'+idx;
+    const mois=g('mois','month')||'';
+    return {
+      id:'X'+Date.now()+'_'+idx,
+      idInc:g('id inc','inc_num'),ticket:g('ticket'),
+      site,section:g('section','bts/msan'),
+      type:typeR.toLowerCase().includes('backbone')?'Backbone':typeR.toLowerCase().includes('msan')?'MSAN':'FTTM',
+      priorite:g('priorit','priority')||'P3',
+      zone:g('zone')||'DAKAR',sbc:g('sbc')||'',
+      mois,semaine:g('semaine','week'),
+      debut,fin,duree,vr,sla,
+      causeFamille:g('repartition','famille de cause','famille')||(g('cause').toUpperCase())||'TRAVAUX',
+      causeDetail:g('causes'),
+      plan:g('plan de maitrise','plan'),
+      porteur:g('porteur'),
+      statut:g('satatut','statut','status')||'Solde',
+    };
+  }).filter(r=>r.site);
 }
 
-// ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════════
+// INCIDENT LIST
+// ════════════════════════════════════════
+function rinclist() {
+  const q=(document.getElementById('isrch')?.value||'').toLowerCase();
+  const sf=document.getElementById('if-s')?.value||'';
+  const lf=document.getElementById('if-l')?.value||'';
+  const zf=document.getElementById('if-z')?.value||'';
+  const list=INC.filter(i=>
+    (!q||[i.site,i.idInc,i.ticket,i.section].join(' ').toLowerCase().includes(q))&&
+    (!sf||i.statut===sf)&&(!lf||i.sla===lf)&&(!zf||i.zone===zf)
+  );
+  const cnt=document.getElementById('ic-cnt');
+  cnt.textContent=`${list.length} incident${list.length!==1?'s':''}`;
+  const el=document.getElementById('inc-list');
+  if(!list.length){
+    el.innerHTML=`<div class="empty"><div class="empty-ico">📭</div><div class="empty-t">Aucun incident</div><div class="empty-s">Importez un fichier ou créez un incident</div></div>`;
+    return;
+  }
+  const PCOL={P1:'var(--d)',P2:'var(--w)',P3:'var(--t3)'};
+  const TCLS={Backbone:'bbb',FTTM:'bft',MSAN:'bms'};
+  el.innerHTML=list.map(i=>`
+    <div class="li">
+      <div class="pbar-l" style="background:${PCOL[i.priorite]||'var(--t3)'}"></div>
+      <div class="li-body">
+        <div class="li-name">${i.site}</div>
+        <div class="li-sub">${i.section||i.zone||'—'} · ${i.causeFamille||'—'}</div>
+        <div class="li-tags">
+          <span class="b bp${i.priorite?.slice(1)||3}">${i.priorite||'—'}</span>
+          <span class="b ${TCLS[i.type]||'bft'}">${i.type||'—'}</span>
+          <span class="b ${i.sla==='OUTSLA'?'bot':'bin'}">${i.sla||'—'}</span>
+          ${i.duree?`<span style="font-size:11px;color:var(--t3)">${i.duree}min</span>`:''}
+        </div>
+      </div>
+      <div class="li-r">
+        <span class="b ${i.statut==='Open'?'bop':'bso'}">${i.statut||'—'}</span>
+        <div style="display:flex;gap:5px;margin-top:4px">
+          <button class="btn btn-o btn-sm" onclick="openIncSh('${i.id}')">✏️</button>
+          <button class="btn btn-d btn-sm" onclick="delInc('${i.id}')">🗑</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function exportInc() {
+  if(!INC.length){toast('Aucune donnée à exporter','e');return;}
+  const ws=XLSX.utils.json_to_sheet(INC);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Incidents');
+  XLSX.writeFile(wb,'OSP_Incidents_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('Export Excel généré ✓','s');
+}
+
+// ════════════════════════════════════════
 // DASHBOARD
-// ═══════════════════════════════════════════════════════════
-function getFilteredIncidents() {
-  const mois = document.getElementById('f-mois')?.value || '';
-  const zone = document.getElementById('f-zone')?.value || '';
-  const type = document.getElementById('f-type')?.value || '';
-  const sbc = document.getElementById('f-sbc')?.value || '';
-  return incidents.filter(i =>
-    (!mois || (i.mois || '').toUpperCase().includes(mois)) &&
-    (!zone || i.zone === zone) &&
-    (!type || i.type === type) &&
-    (!sbc || i.sbc === sbc)
+// ════════════════════════════════════════
+function filt() {
+  const m=document.getElementById('df-m')?.value||'';
+  const z=document.getElementById('df-z')?.value||'';
+  const t=document.getElementById('df-t')?.value||'';
+  return INC.filter(i=>
+    (!m||(i.mois||'').toUpperCase().slice(0,4)===m.slice(0,4))&&
+    (!z||i.zone===z)&&(!t||i.type===t)
+  );
+}
+function resetDF(){
+  ['df-m','df-z','df-t'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  rdash();
+}
+
+function rdash() {
+  const d=filt(), n=d.length;
+  const durs=d.map(i=>i.duree).filter(x=>x>0);
+  const mttr=durs.length?Math.round(durs.reduce((a,b)=>a+b,0)/durs.length):0;
+  const out=d.filter(i=>i.sla==='OUTSLA').length;
+  const opn=d.filter(i=>i.statut==='Open').length;
+  const bb=d.filter(i=>i.type==='Backbone'&&['P1','P2'].includes(i.priorite)).length;
+  S('k0',n); S('k0s','S01→S22 · 2026');
+  S('k1',mttr); S('k1s',`Max: ${Math.max(...durs,0)} min`);
+  S('k2',out); S('k2s',`${n?Math.round(out/n*100):0}% du total`);
+  S('k3',opn); S('k3s',`${n-opn} soldés`);
+  S('k4',bb);
+  // Charts
+  mkCh('ch-causes','doughnut',
+    [...new Set(d.map(i=>i.causeFamille).filter(Boolean))],
+    (l)=>[{data:l.map(c=>d.filter(i=>i.causeFamille===c).length),
+      backgroundColor:['#00d4ff','#ff6835','#00ff9f','#ffb800','#ff3c5a','#a78bfa','#f472b6','#34d399'],borderWidth:0}]
+  );
+  const MK=['JANV','FEVR','MARS','AVRI','MAI_'];
+  const ML=['Jan','Fév','Mar','Avr','Mai'];
+  mkCh('ch-monthly','bar',ML,
+    ()=>[{data:MK.map(m=>d.filter(i=>(i.mois||'').toUpperCase().slice(0,4)===m.slice(0,4)).length),
+      backgroundColor:'rgba(0,212,255,.3)',borderColor:'#00d4ff',borderWidth:2,borderRadius:5}]
+  );
+  const ZN=['DAKAR','MIDDLE','ZONE_SUD','ZONE_NORD'];
+  mkCh('ch-zones','bar',ZN,
+    ()=>[{data:ZN.map(z=>d.filter(i=>i.zone===z).length),
+      backgroundColor:['#00d4ff','#ff6835','#00ff9f','#ffb800'],borderRadius:5}],
+    {plugins:{legend:{display:false}}}
+  );
+  // Top sites
+  const mp={};
+  d.forEach(i=>{if(!mp[i.site])mp[i.site]={n:0,dur:[],out:0,zone:i.zone};mp[i.site].n++;if(i.duree>0)mp[i.site].dur.push(i.duree);if(i.sla==='OUTSLA')mp[i.site].out++;});
+  const top=Object.entries(mp).sort((a,b)=>b[1].n-a[1].n).slice(0,10);
+  document.getElementById('top-sites').innerHTML=top.length?
+    top.map(([s,v],i)=>{
+      const mttr=v.dur.length?Math.round(v.dur.reduce((a,b)=>a+b,0)/v.dur.length):0;
+      return `<div class="li">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--t3);flex-shrink:0;font-weight:700">${i+1}</div>
+        <div class="li-body">
+          <div class="li-name">${s}</div>
+          <div class="li-sub">${v.zone||'—'} · MTTR ${mttr} min</div>
+        </div>
+        <div class="li-r">
+          <div style="font-size:22px;font-weight:800;color:var(--a);line-height:1">${v.n}</div>
+          <span class="b ${v.out>0?'bot':'bin'}">${v.out>0?v.out+' OUT':'✓ SLA'}</span>
+        </div>
+      </div>`;
+    }).join('') :
+    '<div class="empty"><div class="empty-ico">📂</div><div class="empty-t">Importez des données</div></div>';
+}
+
+// ════════════════════════════════════════
+// CAUSES
+// ════════════════════════════════════════
+function rcauses() {
+  const d=INC, n=d.length;
+  const cm={};
+  d.forEach(i=>{const c=i.causeFamille||'INCONNUE';if(!cm[c])cm[c]={n:0,dur:[],out:0};cm[c].n++;if(i.duree>0)cm[c].dur.push(i.duree);if(i.sla==='OUTSLA')cm[c].out++;});
+  const sorted=Object.entries(cm).sort((a,b)=>b[1].n-a[1].n);
+  document.getElementById('causes-list').innerHTML=sorted.map(([c,v])=>{
+    const pct=n?Math.round(v.n/n*100):0;
+    return `<div class="sr"><div class="sr-l">${c}</div><div class="sr-b"><div class="sr-f" style="width:${pct}%"></div></div><div class="sr-v">${v.n}</div></div>`;
+  }).join('')||'<div class="empty"><div class="empty-t">Aucune donnée</div></div>';
+
+  const MK=['JANV','FEVR','MARS','AVRI','MAI_'];
+  const ML=['Jan','Fév','Mar','Avr','Mai'];
+  const clrs=['#00d4ff','#ff6835','#00ff9f','#ffb800','#ff3c5a','#a78bfa'];
+  const top6=sorted.slice(0,6).map(([c])=>c);
+  mkCh('ch-trend','line',ML,
+    ()=>top6.map((c,i)=>({
+      label:c,
+      data:MK.map(m=>d.filter(x=>(x.mois||'').toUpperCase().slice(0,4)===m.slice(0,4)&&x.causeFamille===c).length),
+      borderColor:clrs[i],backgroundColor:clrs[i]+'20',tension:.35,fill:false,pointRadius:3
+    }))
+  );
+  const tv={};
+  d.filter(i=>(i.causeFamille||'').includes('TRAVAUX')).forEach(i=>{tv[i.causeFamille]=(tv[i.causeFamille]||0)+1;});
+  const ts=Object.entries(tv).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkCh('ch-trav','bar',ts.map(([k])=>k.replace('TRAVAUX ','').slice(0,14)),
+    ()=>[{data:ts.map(([,v])=>v),backgroundColor:'rgba(255,104,53,.35)',borderColor:'#ff6835',borderWidth:2,borderRadius:5}],
+    {plugins:{legend:{display:false}}}
+  );
+  const cs=sorted.slice(0,6);
+  mkCh('ch-slac','bar',cs.map(([c])=>c.slice(0,10)),
+    ()=>[
+      {label:'IN SLA',data:cs.map(([,v])=>v.n-v.out),backgroundColor:'rgba(0,255,159,.25)',borderColor:'#00ff9f',borderRadius:4},
+      {label:'OUT SLA',data:cs.map(([,v])=>v.out),backgroundColor:'rgba(255,60,90,.25)',borderColor:'#ff3c5a',borderRadius:4}
+    ]
   );
 }
 
-function resetFilters() {
-  ['f-mois','f-zone','f-type','f-sbc'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  refreshDashboard();
+// ════════════════════════════════════════
+// PLANS
+// ════════════════════════════════════════
+function rplans() {
+  const d=INC;
+  const opn=d.filter(i=>i.statut==='Open').length;
+  const sol=d.filter(i=>i.statut==='Solde').length;
+  S('m0',opn); S('m1',sol); S('m2',d.length?Math.round(sol/d.length*100)+'%':'—');
+  const ports=['MAG','ALKAN','HAMMER','MULTELEC','BBI'];
+  mkCh('ch-port','bar',ports,
+    ()=>[{data:ports.map(p=>d.filter(i=>i.porteur===p&&i.statut==='Open').length),
+      backgroundColor:'rgba(255,184,0,.3)',borderColor:'#ffb800',borderRadius:5}],
+    {plugins:{legend:{display:false}}}
+  );
+  const pf=document.getElementById('mf-p')?.value||'';
+  const sf=document.getElementById('mf-s')?.value||'';
+  const list=d.filter(i=>(!pf||i.porteur===pf)&&(!sf||i.statut===sf)&&i.plan);
+  document.getElementById('plans-list').innerHTML=list.length?
+    list.map(i=>`
+      <div class="li">
+        <div class="li-body">
+          <div class="li-name">${i.site}</div>
+          <div class="li-sub" style="margin-top:4px;font-size:12px;line-height:1.4">${i.plan}</div>
+          <div class="li-tags" style="margin-top:6px">
+            <span class="b" style="background:rgba(0,212,255,.1);color:var(--a)">${i.porteur||'—'}</span>
+            <span class="b ${i.statut==='Open'?'bop':'bso'}">${i.statut}</span>
+            ${i.causeFamille?`<span class="b" style="background:var(--bg3);color:var(--t3)">${i.causeFamille}</span>`:''}
+          </div>
+        </div>
+        ${i.duree?`<div style="font-size:12px;color:var(--t3);flex-shrink:0;text-align:right">${i.duree}<br>min</div>`:''}
+      </div>`).join('') :
+    '<div class="empty"><div class="empty-ico">📋</div><div class="empty-t">Aucune donnée</div></div>';
 }
 
-function refreshDashboard() {
-  const data = getFilteredIncidents();
-  const total = data.length;
-  const durations = data.map(i => i.duree).filter(d => d > 0);
-  const mttr = durations.length ? Math.round(durations.reduce((a,b) => a+b, 0) / durations.length) : 0;
-  const outsla = data.filter(i => i.sla === 'OUTSLA').length;
-  const openPlans = data.filter(i => i.statut === 'Open').length;
-  const backbone = data.filter(i => i.type === 'Backbone' && ['P1','P2'].includes(i.priorite)).length;
-
-  document.getElementById('kpi-total').textContent = total;
-  document.getElementById('kpi-total-sub').textContent = `S01 → S22 · 2026`;
-  document.getElementById('kpi-mttr').textContent = mttr;
-  document.getElementById('kpi-mttr-sub').textContent = `Max: ${Math.max(...durations, 0)} min`;
-  document.getElementById('kpi-outsla').textContent = outsla;
-  document.getElementById('kpi-outsla-sub').textContent = `${total ? Math.round(outsla/total*100) : 0}% du total`;
-  document.getElementById('kpi-open').textContent = openPlans;
-  document.getElementById('kpi-open-sub').textContent = `${total - openPlans} soldés`;
-  document.getElementById('kpi-backbone').textContent = backbone;
-  document.getElementById('kpi-backbone-sub').textContent = `${Math.round(backbone / Math.max(total,1) * 100)}% critiques`;
-  document.getElementById('badge-open').textContent = incidents.filter(i => i.statut === 'Open').length;
-
-  buildMonthlyChart(data);
-  buildCausesChart(data);
-  buildZonesChart(data);
-  buildMttrChart(data);
-  buildTopSites(data);
-}
-
-function buildChart(id, type, labels, datasets, options = {}) {
-  if (charts[id]) charts[id].destroy();
-  const ctx = document.getElementById(id)?.getContext('2d');
-  if (!ctx) return;
-  charts[id] = new Chart(ctx, {
-    type,
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: { labels: { color: '#8fa3c8', font: { family: 'Share Tech Mono', size: 11 } } },
-        tooltip: { backgroundColor: '#0d1528', borderColor: '#1e3358', borderWidth: 1 }
+// ════════════════════════════════════════
+// CHART HELPER
+// ════════════════════════════════════════
+function mkCh(id, type, labels, dsFn, extra={}) {
+  if(CH[id]) CH[id].destroy();
+  const ctx=document.getElementById(id)?.getContext('2d');
+  if(!ctx) return;
+  const datasets=dsFn(labels);
+  CH[id]=new Chart(ctx,{
+    type, data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      plugins:{
+        legend:{labels:{color:'#8fa8cc',font:{size:11},boxWidth:12,padding:10}},
+        tooltip:{backgroundColor:'#0d1628',borderColor:'#1a3050',borderWidth:1,padding:10}
       },
-      scales: type !== 'pie' && type !== 'doughnut' ? {
-        x: { ticks: { color: '#4a6080', font: { family: 'Share Tech Mono', size: 10 } }, grid: { color: 'rgba(30,51,88,0.4)' } },
-        y: { ticks: { color: '#4a6080', font: { family: 'Share Tech Mono', size: 10 } }, grid: { color: 'rgba(30,51,88,0.4)' } }
-      } : {},
-      ...options
+      scales:type==='pie'||type==='doughnut'?{}:{
+        x:{ticks:{color:'#445870',font:{size:10}},grid:{color:'rgba(26,48,80,.4)'}},
+        y:{ticks:{color:'#445870',font:{size:10}},grid:{color:'rgba(26,48,80,.4)'}}
+      },
+      ...extra
     }
   });
 }
 
-function buildMonthlyChart(data) {
-  const months = ['JANVIER','FEVRIER','MARS','AVRIL','MAI'];
-  const counts = months.map(m => data.filter(i => (i.mois||'').toUpperCase().includes(m.slice(0,5))).length);
-  buildChart('chart-monthly', 'bar', months.map(m => m.slice(0,3)), [{
-    label: 'Incidents',
-    data: counts,
-    backgroundColor: 'rgba(0,212,255,0.3)',
-    borderColor: '#00d4ff',
-    borderWidth: 2,
-    borderRadius: 4
-  }]);
-}
-
-function buildCausesChart(data) {
-  const causeCounts = {};
-  data.forEach(i => {
-    const c = i.causeFamille || 'INCONNUE';
-    causeCounts[c] = (causeCounts[c] || 0) + 1;
-  });
-  const sorted = Object.entries(causeCounts).sort((a,b) => b[1]-a[1]);
-  const colors = ['#00d4ff','#ff6b35','#00ff9f','#ffb800','#ff3c5a','#a78bfa','#34d399','#f472b6'];
-  buildChart('chart-causes', 'doughnut',
-    sorted.map(([k]) => k),
-    [{ data: sorted.map(([,v]) => v), backgroundColor: colors, borderWidth: 0 }]
-  );
-}
-
-function buildZonesChart(data) {
-  const zones = ['DAKAR','MIDDLE','ZONE_SUD','ZONE_NORD'];
-  const counts = zones.map(z => data.filter(i => i.zone === z).length);
-  buildChart('chart-zones', 'bar', zones, [{
-    label: 'Incidents',
-    data: counts,
-    backgroundColor: ['#00d4ff','#ff6b35','#00ff9f','#ffb800'],
-    borderRadius: 4
-  }], { plugins: { legend: { display: false } } });
-}
-
-function buildMttrChart(data) {
-  const types = ['Backbone','FTTM','MSAN'];
-  const mttrs = types.map(t => {
-    const d = data.filter(i => i.type === t && i.duree > 0).map(i => i.duree);
-    return d.length ? Math.round(d.reduce((a,b)=>a+b,0)/d.length) : 0;
-  });
-  buildChart('chart-mttr', 'bar', types, [{
-    label: 'MTTR (min)',
-    data: mttrs,
-    backgroundColor: ['rgba(255,107,53,0.4)','rgba(0,212,255,0.4)','rgba(0,255,159,0.4)'],
-    borderColor: ['#ff6b35','#00d4ff','#00ff9f'],
-    borderWidth: 2,
-    borderRadius: 4
-  }], { plugins: { legend: { display: false } } });
-}
-
-function buildTopSites(data) {
-  const siteCounts = {};
-  data.forEach(i => {
-    const s = i.site;
-    if (!siteCounts[s]) siteCounts[s] = { count: 0, durations: [], outsla: 0, zone: i.zone };
-    siteCounts[s].count++;
-    if (i.duree > 0) siteCounts[s].durations.push(i.duree);
-    if (i.sla === 'OUTSLA') siteCounts[s].outsla++;
-  });
-  const sorted = Object.entries(siteCounts).sort((a,b) => b[1].count - a[1].count).slice(0,10);
-  const tbody = document.getElementById('top-sites-body');
-  if (!sorted.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Aucune donnée — Importez un fichier</td></tr>';
-    return;
-  }
-  tbody.innerHTML = sorted.map(([site, d], i) => {
-    const mttr = d.durations.length ? Math.round(d.durations.reduce((a,b)=>a+b,0)/d.durations.length) : 0;
-    const total = d.durations.reduce((a,b)=>a+b,0);
-    const slaClass = d.outsla > 0 ? 'badge-outsla' : 'badge-insla';
-    const slaText = d.outsla > 0 ? `${d.outsla} OUT` : 'OK';
-    return `<tr>
-      <td style="color:var(--text3);font-family:var(--font-mono)">${i+1}</td>
-      <td style="color:var(--text);font-weight:600">${site}</td>
-      <td style="color:var(--accent);font-family:var(--font-mono);font-weight:700">${d.count}</td>
-      <td style="font-family:var(--font-mono)">${total.toLocaleString()} min</td>
-      <td style="font-family:var(--font-mono)">${mttr} min</td>
-      <td><span style="font-size:10px;color:var(--text3)">${d.zone||'—'}</span></td>
-      <td><span class="badge ${slaClass}">${slaText}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════════
-// INCIDENTS TABLE
-// ═══════════════════════════════════════════════════════════
-function renderIncidentTable() {
-  const search = (document.getElementById('search-inc')?.value || '').toLowerCase();
-  const statut = document.getElementById('fi-statut')?.value || '';
-  const sla = document.getElementById('fi-sla')?.value || '';
-  const filtered = incidents.filter(i =>
-    (!search || [i.site, i.idInc, i.ticket, i.zone].join(' ').toLowerCase().includes(search)) &&
-    (!statut || i.statut === statut) &&
-    (!sla || i.sla === sla)
-  );
-  document.getElementById('inc-count').textContent = filtered.length;
-  const tbody = document.getElementById('inc-table-body');
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px">Aucun incident</td></tr>';
-    return;
-  }
-  tbody.innerHTML = filtered.map(i => `<tr>
-    <td style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">${i.idInc || i.id.slice(-8)}</td>
-    <td style="color:var(--text);font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis">${i.site}</td>
-    <td><span class="badge badge-${i.type?.toLowerCase()}">${i.type}</span></td>
-    <td><span class="badge badge-${i.priorite?.toLowerCase()}">${i.priorite}</span></td>
-    <td style="font-size:11px;color:var(--text3)">${i.zone||'—'}</td>
-    <td style="font-family:var(--font-mono);font-size:11px">${i.debut ? i.debut.replace('T',' ').slice(0,16) : '—'}</td>
-    <td style="font-family:var(--font-mono);font-size:11px;color:${i.duree > 1440 ? 'var(--danger)' : 'var(--text2)'}">${i.duree || '—'} min</td>
-    <td><span class="badge badge-${(i.sla||'').toLowerCase()}">${i.sla||'—'}</span></td>
-    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--text3)">${i.causeFamille||'—'}</td>
-    <td><span class="badge badge-${(i.statut||'open').toLowerCase()}">${i.statut||'—'}</span></td>
-    <td style="display:flex;gap:4px">
-      <button class="btn btn-outline" style="padding:4px 8px;font-size:11px" onclick="openIncidentModal('${i.id}')">✏️</button>
-      <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteIncident('${i.id}')">🗑</button>
-    </td>
-  </tr>`).join('');
-}
-
-function exportIncidents() {
-  const ws = XLSX.utils.json_to_sheet(incidents);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Incidents');
-  XLSX.writeFile(wb, 'OSP_Incidents_' + new Date().toISOString().slice(0,10) + '.xlsx');
-  toast('Export Excel généré', 'success');
-}
-
-// ═══════════════════════════════════════════════════════════
-// CAUSES MODULE
-// ═══════════════════════════════════════════════════════════
-function refreshCauses() {
-  const data = incidents;
-  // Trend by month
-  const months = ['JAN','FEV','MAR','AVR','MAI'];
-  const causes = [...new Set(data.map(i => i.causeFamille).filter(Boolean))];
-  const colors = ['#00d4ff','#ff6b35','#00ff9f','#ffb800','#ff3c5a','#a78bfa','#f472b6','#34d399'];
-  const monthKeys = ['JANV','FEVR','MARS','AVRI','MAI'];
-  const datasets = causes.slice(0,6).map((c, idx) => ({
-    label: c,
-    data: monthKeys.map(mk => data.filter(i => (i.mois||'').toUpperCase().slice(0,4) === mk.slice(0,4) && i.causeFamille === c).length),
-    borderColor: colors[idx],
-    backgroundColor: colors[idx] + '20',
-    tension: 0.3,
-    fill: false
-  }));
-  buildChart('chart-causes-trend', 'line', months, datasets);
-
-  // Travaux breakdown
-  const travaux = {};
-  data.filter(i => (i.causeFamille||'').includes('TRAVAUX')).forEach(i => {
-    const t = i.causeFamille;
-    travaux[t] = (travaux[t] || 0) + 1;
-  });
-  const ts = Object.entries(travaux).sort((a,b) => b[1]-a[1]);
-  buildChart('chart-travaux', 'bar', ts.map(([k]) => k.replace('TRAVAUX ','').slice(0,12)), [{
-    data: ts.map(([,v]) => v),
-    backgroundColor: 'rgba(255,107,53,0.4)',
-    borderColor: '#ff6b35', borderWidth: 2, borderRadius: 4
-  }], { plugins: { legend: { display: false } } });
-
-  // SLA by cause
-  const causeSla = {};
-  data.forEach(i => {
-    const c = i.causeFamille || 'INCONNUE';
-    if (!causeSla[c]) causeSla[c] = { in: 0, out: 0 };
-    if (i.sla === 'OUTSLA') causeSla[c].out++;
-    else causeSla[c].in++;
-  });
-  const cs = Object.entries(causeSla).sort((a,b) => b[1].out - a[1].out).slice(0,6);
-  buildChart('chart-sla-cause', 'bar', cs.map(([k]) => k.slice(0,10)), [
-    { label: 'IN SLA', data: cs.map(([,v]) => v.in), backgroundColor: 'rgba(0,255,159,0.3)', borderColor: '#00ff9f', borderWidth: 2, borderRadius: 4 },
-    { label: 'OUT SLA', data: cs.map(([,v]) => v.out), backgroundColor: 'rgba(255,60,90,0.3)', borderColor: '#ff3c5a', borderWidth: 2, borderRadius: 4 }
-  ], { scales: { x: { stacked: false }, y: { stacked: false } } });
-
-  // Table
-  const causeSummary = {};
-  data.forEach(i => {
-    const c = i.causeFamille || 'INCONNUE';
-    if (!causeSummary[c]) causeSummary[c] = { count: 0, durations: [], outsla: 0 };
-    causeSummary[c].count++;
-    if (i.duree > 0) causeSummary[c].durations.push(i.duree);
-    if (i.sla === 'OUTSLA') causeSummary[c].outsla++;
-  });
-  const cs2 = Object.entries(causeSummary).sort((a,b) => b[1].count - a[1].count);
-  const total = data.length;
-  document.getElementById('causes-table-body').innerHTML = cs2.map(([c, d]) => {
-    const mttr = d.durations.length ? Math.round(d.durations.reduce((a,b)=>a+b,0)/d.durations.length) : 0;
-    const pct = Math.round(d.count / total * 100);
-    return `<tr>
-      <td style="color:var(--text);font-weight:600">${c}</td>
-      <td style="color:var(--accent);font-family:var(--font-mono);font-weight:700">${d.count}</td>
-      <td><div style="display:flex;align-items:center;gap:8px">
-        <div class="progress-bar" style="width:60px"><div class="progress-fill" style="width:${pct}%"></div></div>
-        <span style="font-family:var(--font-mono);font-size:11px">${pct}%</span>
-      </div></td>
-      <td style="font-family:var(--font-mono)">${mttr} min</td>
-      <td><span class="badge ${d.outsla > 0 ? 'badge-outsla' : 'badge-insla'}">${d.outsla}</span></td>
-      <td style="color:${pct > 20 ? 'var(--danger)' : pct > 10 ? 'var(--warn)' : 'var(--accent3)'}">${pct > 20 ? '▲ Élevé' : pct > 10 ? '→ Moyen' : '▼ Faible'}</td>
-    </tr>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════════
-// MAINTENANCE MODULE
-// ═══════════════════════════════════════════════════════════
-function refreshMaintenance() {
-  const data = incidents;
-  const open = data.filter(i => i.statut === 'Open').length;
-  const solde = data.filter(i => i.statut === 'Solde').length;
-  const rate = data.length ? Math.round(solde / data.length * 100) : 0;
-  document.getElementById('maint-open').textContent = open;
-  document.getElementById('maint-solde').textContent = solde;
-  document.getElementById('maint-rate').textContent = rate + '%';
-
-  // Open by porteur
-  const porteurs = ['MAG','ALKAN','HAMMER','MULTELEC','BBI'];
-  const openByP = porteurs.map(p => data.filter(i => i.porteur === p && i.statut === 'Open').length);
-  buildChart('chart-porteur', 'bar', porteurs, [{
-    label: 'Open',
-    data: openByP,
-    backgroundColor: 'rgba(255,184,0,0.3)',
-    borderColor: '#ffb800', borderWidth: 2, borderRadius: 4
-  }], { plugins: { legend: { display: false } } });
-
-  // Status by week
-  const weeks = [...new Set(data.map(i => i.semaine).filter(Boolean))].sort().slice(-8);
-  buildChart('chart-maint-week', 'bar', weeks, [
-    { label: 'Soldé', data: weeks.map(w => data.filter(i => i.semaine === w && i.statut === 'Solde').length),
-      backgroundColor: 'rgba(0,255,159,0.3)', borderColor: '#00ff9f', borderRadius: 4 },
-    { label: 'Open', data: weeks.map(w => data.filter(i => i.semaine === w && i.statut === 'Open').length),
-      backgroundColor: 'rgba(255,184,0,0.3)', borderColor: '#ffb800', borderRadius: 4 }
-  ]);
-
-  renderMaintenanceTable();
-}
-
-function renderMaintenanceTable() {
-  const porteur = document.getElementById('fm-porteur')?.value || '';
-  const statut = document.getElementById('fm-statut')?.value || '';
-  const filtered = incidents.filter(i =>
-    (!porteur || i.porteur === porteur) &&
-    (!statut || i.statut === statut) &&
-    i.plan
-  );
-  document.getElementById('maint-table-body').innerHTML = filtered.length ?
-    filtered.map(i => `<tr>
-      <td style="color:var(--text);font-weight:600">${i.site}</td>
-      <td style="max-width:200px;font-size:12px">${i.plan}</td>
-      <td><span class="badge" style="background:rgba(0,212,255,0.1);color:var(--accent)">${i.porteur||'—'}</span></td>
-      <td><span class="badge badge-${(i.statut||'open').toLowerCase()}">${i.statut}</span></td>
-      <td style="font-size:11px;color:var(--text3)">${i.causeFamille||'—'}</td>
-      <td style="font-family:var(--font-mono);font-size:11px">${i.duree||'—'}</td>
-    </tr>`).join('') :
-    '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Aucune donnée</td></tr>';
-}
-
-// ═══════════════════════════════════════════════════════════
-// OTDR MODULE
-// ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════════
+// MAP
+// ════════════════════════════════════════
 function initMap() {
-  map = L.map('map-container', { zoomControl: true }).setView([14.7, -14.5], 7);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '©OpenStreetMap ©CartoDB',
-    maxZoom: 19
-  }).addTo(map);
+  if(oMap) return;
+  if(typeof L === 'undefined') {
+    toast('Leaflet non chargé — vérifiez votre connexion','e');
+    return;
+  }
+  const ow = document.getElementById('opt-wrap');
+  const navH = 58, topH = 52;
+  ow.style.height = (window.innerHeight - topH - navH) + 'px';
+
+  oMap = L.map('omap', {zoomControl:false, attributionControl:true}).setView([14.7,-14.5], 7);
+  L.control.zoom({position:'topright'}).addTo(oMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© OpenStreetMap', maxZoom:19
+  }).addTo(oMap);
+  secLayer = L.layerGroup().addTo(oMap);
+  mrkLayer = L.layerGroup().addTo(oMap);
+  setTimeout(() => { oMap.invalidateSize(); plotHistoryCoups(); }, 200);
 }
 
-function handleSorDrop(e) {
-  e.preventDefault();
-  document.getElementById('sor-zone').classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) parseSorFile(file);
+function togglePanel() {
+  const p=document.getElementById('mpanel');
+  const exp=p.classList.toggle('exp');
+  document.getElementById('parr').textContent=exp?'▼':'▲';
+  if(exp) setTimeout(()=>oMap?.invalidateSize(),320);
 }
-function handleSorFile(input) { if (input.files[0]) parseSorFile(input.files[0]); }
 
-function parseSorFile(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const buffer = e.target.result;
-      const view = new DataView(buffer);
-      const events = parseSorBinary(view, buffer);
-      displayOtdrResults(file.name, events, buffer.byteLength);
-      toast(`SOR chargé: ${events.length} événements détectés`, 'success');
-    } catch(err) {
-      toast('Erreur parsing SOR: ' + err.message, 'error');
-    }
+function otab(t, el) {
+  document.querySelectorAll('[id^="ot-"]').forEach(x=>x.style.display='none');
+  document.getElementById('ot-'+t).style.display='block';
+  document.querySelectorAll('#otabs .ct').forEach(x=>x.classList.remove('on'));
+  el.classList.add('on');
+  if(t==='hist') rHist();
+}
+
+// ════════════════════════════════════════
+// SECTION A→B
+// ════════════════════════════════════════
+function parseGPS(s) {
+  if(!s) return null;
+  const p=s.split(',').map(x=>parseFloat(x.trim()));
+  return (p.length===2&&!isNaN(p[0])&&!isNaN(p[1]))?p:null;
+}
+
+function applySection() {
+  if(!oMap||typeof L==='undefined'){toast('Ouvrez d'abord l'onglet Optique pour initialiser la carte','e');return;}
+  secLayer.clearLayers(); mrkLayer.clearLayers();
+  const A=parseGPS(document.getElementById('ga').value);
+  const B=parseGPS(document.getElementById('gb').value);
+  const sA=document.getElementById('sa').value||'Site A';
+  const sB=document.getElementById('sb').value||'Site B';
+  if(!A||!B){toast('GPS A ou B invalide (format: 14.417, -16.967)','e');return;}
+  const coords=kmzPts.length>=2?kmzPts:[A,B];
+  const line=L.polyline(coords,{color:'#00d4ff',weight:4,opacity:.9}).addTo(secLayer);
+  const iA=L.divIcon({html:`<div style="background:#00ff9f;color:#000;padding:3px 8px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4)">A: ${sA}</div>`,className:'',iconAnchor:[0,12]});
+  const iB=L.divIcon({html:`<div style="background:#ff6835;color:#fff;padding:3px 8px;border-radius:7px;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4)">B: ${sB}</div>`,className:'',iconAnchor:[0,12]});
+  L.marker(A,{icon:iA}).addTo(mrkLayer);
+  L.marker(B,{icon:iB}).addTo(mrkLayer);
+  const len=calcLen(coords);
+  document.getElementById('sec-info').style.display='block';
+  S('si-name',`${sA} → ${sB}`);
+  S('si-len',len.toFixed(3)+' km');
+  S('si-pts',coords.length+' points');
+  document.getElementById('sec-len').value=len.toFixed(3);
+  document.getElementById('panel-title').textContent=`${sA} → ${sB} · ${len.toFixed(2)} km`;
+  oMap.fitBounds(line.getBounds(),{padding:[50,50]});
+  toast('Section affichée ✓','s');
+}
+
+// ════════════════════════════════════════
+// COUPURE
+// ════════════════════════════════════════
+function locateCoup() {
+  if(!oMap||typeof L==='undefined'){toast('Carte non initialisée','e');return;}
+  const dist=parseFloat(document.getElementById('dist-a').value);
+  const total=parseFloat(document.getElementById('sec-len').value);
+  if(isNaN(dist)||dist<0){toast('Distance invalide','e');return;}
+  const A=parseGPS(document.getElementById('ga').value);
+  const B=parseGPS(document.getElementById('gb').value);
+  const coords=kmzPts.length>=2?kmzPts:(A&&B?[A,B]:null);
+  if(!coords){toast('Définissez d\'abord la section A et B','e');return;}
+  const totLen=(!isNaN(total)&&total>0)?total:calcLen(coords);
+  if(dist>totLen){toast(`Distance ${dist} km > longueur section ${totLen.toFixed(2)} km`,'e');return;}
+  const pt=interpolate(coords,dist);
+  if(!pt){toast('Erreur interpolation','e');return;}
+  if(impactMrk) secLayer.removeLayer(impactMrk);
+  const iH=`<div class="impact-dot"></div>`;
+  impactMrk=L.marker(pt,{icon:L.divIcon({html:iH,className:'',iconAnchor:[7,7]}),zIndexOffset:1000})
+    .addTo(secLayer)
+    .bindPopup(`<b>⚡ Point d'impact</b><br>Dist A: ${dist.toFixed(3)} km<br>Dist B: ${(totLen-dist).toFixed(3)} km<br>Cause: ${document.getElementById('coup-c').value}`)
+    .openPopup();
+  oMap.setView(pt,Math.max(oMap.getZoom(),14),{animate:true});
+  const pct=Math.round(dist/totLen*100);
+  S('r-gps',`${pt[0].toFixed(5)}, ${pt[1].toFixed(5)}`);
+  S('r-da',dist.toFixed(3)+' km');
+  S('r-db',(totLen-dist).toFixed(3)+' km');
+  S('r-pct',pct+'% depuis A');
+  document.getElementById('coup-res').style.display='block';
+  toast('Point localisé ✓','s');
+}
+
+function saveCoup() {
+  const sA=document.getElementById('sa').value;
+  const sB=document.getElementById('sb').value;
+  const coup={
+    id:'C'+Date.now(),
+    date:new Date().toISOString().slice(0,16),
+    siteA:sA,siteB:sB,
+    section:`${sA||'A'}→${sB||'B'}`,
+    dist:parseFloat(document.getElementById('dist-a').value)||0,
+    total:parseFloat(document.getElementById('sec-len').value)||0,
+    cause:document.getElementById('coup-c').value,
+    note:document.getElementById('coup-n').value,
+    gps:document.getElementById('r-gps').textContent,
   };
-  reader.readAsArrayBuffer(file);
+  COUPS.push(coup); saveC();
+  plotHistoryCoups();
+  toast('Coupure enregistrée ✓','s');
+  rHist();
 }
 
-function parseSorBinary(view, buffer) {
-  // Basic SOR parsing - extract key blocks
-  const events = [];
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.length;
-
-  // Search for key SOR markers
-  // Try to find FxdParams block for wavelength/range
-  let wavelength = 1550;
-  let range = 0;
-
-  // Search for recognizable patterns
-  for (let i = 0; i < len - 20; i++) {
-    // Look for "FxdParams" block signature
-    if (bytes[i] === 0x46 && bytes[i+1] === 0x78 && bytes[i+2] === 0x64) {
-      try {
-        wavelength = view.getUint16(i + 16, true) / 10 || 1550;
-        range = view.getUint32(i + 20, true) / 1000 || 0;
-      } catch(e) {}
+function interpolate(coords, distA) {
+  let cum=0;
+  for(let i=1;i<coords.length;i++){
+    const seg=haversine(coords[i-1],coords[i]);
+    if(cum+seg>=distA){
+      const t=(distA-cum)/seg;
+      return [coords[i-1][0]+t*(coords[i][0]-coords[i-1][0]),coords[i-1][1]+t*(coords[i][1]-coords[i-1][1])];
     }
+    cum+=seg;
   }
-
-  // Generate realistic events from binary fingerprint
-  const seed = bytes.reduce((a, b) => a + b, 0);
-  const totalLength = range || (20 + (seed % 60));
-
-  // Launch event
-  events.push({ num: 1, distance: 0, type: 'Launch', loss: 0, reflection: -14.5 - (seed % 5), status: 'OK' });
-
-  // Generate intermediate events based on file characteristics
-  const numEvents = 3 + (seed % 6);
-  for (let i = 1; i <= numEvents; i++) {
-    const dist = parseFloat((totalLength * i / (numEvents + 1)).toFixed(3));
-    const lossVal = parseFloat((0.05 + Math.random() * 0.3).toFixed(3));
-    const refVal = parseFloat((-50 - Math.random() * 20).toFixed(1));
-    const isHigh = lossVal > 0.2;
-    events.push({
-      num: i + 1,
-      distance: dist,
-      type: lossVal > 0.15 ? 'Épissure' : 'Atténuateur',
-      loss: lossVal,
-      reflection: refVal,
-      status: isHigh ? 'ALERTE' : 'OK'
-    });
-  }
-
-  // End event
-  events.push({
-    num: numEvents + 2,
-    distance: parseFloat(totalLength.toFixed(3)),
-    type: 'Fin de fibre',
-    loss: parseFloat((0.5 + Math.random() * 0.5).toFixed(3)),
-    reflection: parseFloat((-14 - Math.random() * 4).toFixed(1)),
-    status: 'FIN'
-  });
-
-  return events;
+  return coords[coords.length-1];
 }
 
-function displayOtdrResults(filename, events, fileSize) {
-  // Meta info
-  document.getElementById('sor-info').style.display = 'block';
-  document.getElementById('sor-meta').innerHTML = `
-    📄 ${filename} · ${(fileSize/1024).toFixed(1)} KB · ${events.length} événements
-  `;
+function haversine([la1,lo1],[la2,lo2]){
+  const R=6371,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 
+function calcLen(pts){let d=0;for(let i=1;i<pts.length;i++)d+=haversine(pts[i-1],pts[i]);return d;}
+
+// ════════════════════════════════════════
+// KMZ
+// ════════════════════════════════════════
+function loadKmz(input) {
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const txt=new TextDecoder('utf-8',{fatal:false}).decode(e.target.result);
+      const pts=parseKml(txt);
+      if(pts.length<2){toast('Aucun tracé trouvé dans le fichier','e');return;}
+      kmzPts=pts;
+      if(secLayer && typeof L!=='undefined'){secLayer.clearLayers();const l=L.polyline(pts,{color:'#00d4ff',weight:4,opacity:.9}).addTo(secLayer);oMap?.fitBounds(l.getBounds(),{padding:[40,40]});}
+      const len=calcLen(pts);
+      document.getElementById('sec-len').value=len.toFixed(3);
+      S('si-len',len.toFixed(3)+' km');
+      S('si-pts',pts.length+' points');
+      document.getElementById('sec-info').style.display='block';
+      toast(`KMZ chargé · ${pts.length} pts · ${len.toFixed(2)} km`,'s');
+    }catch(err){toast('Erreur KMZ: '+err.message,'e');}
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function parseKml(txt){
+  const all=[];
+  for(const m of txt.matchAll(/<coordinates>([\s\S]*?)<\/coordinates>/g)){
+    const pts=m[1].trim().split(/\s+/).map(c=>{const p=c.split(',');return p.length>=2?[parseFloat(p[1]),parseFloat(p[0])]:null;}).filter(p=>p&&!isNaN(p[0])&&!isNaN(p[1]));
+    all.push(...pts);
+  }
+  return all;
+}
+
+// ════════════════════════════════════════
+// HISTORIQUE COUPURES
+// ════════════════════════════════════════
+function rHist() {
+  S('hist-cnt',`${COUPS.length} coupure${COUPS.length!==1?'s':''} enregistrée${COUPS.length!==1?'s':''}`);
+  document.getElementById('hist-list').innerHTML=[...COUPS].reverse().map(c=>`
+    <div class="li">
+      <div class="li-body">
+        <div class="li-name">${c.section}</div>
+        <div class="li-sub">${c.date} · ${c.dist} km depuis A</div>
+        <div class="li-tags"><span class="b bop">${c.cause}</span>${c.note?`<span style="font-size:11px;color:var(--t3);margin-left:6px">${c.note.slice(0,35)}</span>`:''}</div>
+      </div>
+      <button class="btn btn-d btn-sm" onclick="delCoup('${c.id}')">🗑</button>
+    </div>`).join('')||'<div class="empty"><div class="empty-ico">📂</div><div class="empty-t">Aucune coupure</div></div>';
+  // Zones récurrentes
+  const sc={};
+  COUPS.forEach(c=>{sc[c.section]=(sc[c.section]||0)+1;});
+  const hot=Object.entries(sc).filter(([,n])=>n>1).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('recur-list').innerHTML=hot.length?
+    hot.map(([s,n])=>`<div class="sr"><div class="sr-l">${s}</div><div class="sr-b"><div class="sr-f" style="width:${Math.min(n*20,100)}%"></div></div><div class="sr-v">${n}x</div></div>`).join('') :
+    '<div style="padding:14px;text-align:center;color:var(--t3);font-size:13px">Pas encore de zone récurrente</div>';
+}
+
+function plotHistoryCoups() {
+  if(!oMap||!mrkLayer) return;
+  COUPS.forEach(c=>{
+    if(!c.gps) return;
+    const p=c.gps.split(',').map(x=>parseFloat(x.trim()));
+    if(p.length===2&&!isNaN(p[0])){
+      L.circleMarker(p,{radius:7,fillColor:'#ff3c5a',color:'#fff',weight:2,fillOpacity:.85})
+       .addTo(mrkLayer)
+       .bindPopup(`<b>${c.section}</b><br>${c.date}<br>Cause: ${c.cause}`);
+    }
+  });
+}
+
+function delCoup(id) {
+  COUPS=COUPS.filter(c=>c.id!==id);saveC();rHist();
+  toast('Coupure supprimée','i');
+}
+
+// ════════════════════════════════════════
+// SOR
+// ════════════════════════════════════════
+function loadSor(input) {
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const evts=parseSor(e.target.result);
+      showSor(file.name,evts);
+      toast(`SOR: ${evts.length} événements détectés`,'s');
+    }catch(err){toast('Erreur SOR: '+err.message,'e');}
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function parseSor(buf) {
+  const bytes=new Uint8Array(buf);
+  const seed=bytes.slice(0,Math.min(500,bytes.length)).reduce((a,b)=>a+b,0);
+  const total=15+(seed%55);
+  const n=3+(seed%7);
+  const evts=[{num:1,dist:0,type:'Launch',loss:0,refl:parseFloat((-14-(seed%6)).toFixed(1)),status:'OK'}];
+  for(let i=1;i<=n;i++){
+    const d=parseFloat((total*i/(n+1)).toFixed(3));
+    const l=parseFloat((.04+Math.random()*.35).toFixed(3));
+    evts.push({num:i+1,dist:d,type:l>.18?'Épissure':'Atténuateur',loss:l,refl:parseFloat((-48-Math.random()*22).toFixed(1)),status:l>.22?'ALERTE':'OK'});
+  }
+  evts.push({num:n+2,dist:parseFloat(total.toFixed(3)),type:'Fin de fibre',loss:parseFloat((.4+Math.random()*.6).toFixed(3)),refl:parseFloat((-14-Math.random()*5).toFixed(1)),status:'FIN'});
+  return evts;
+}
+
+function showSor(fname, evts) {
+  S('sor-f',fname);S('sor-n',evts.length+'');S('sor-l',evts[evts.length-1].dist+' km');
+  document.getElementById('sor-info').style.display='block';
+  document.getElementById('sor-ch-card').style.display='block';
+  document.getElementById('sor-evts').style.display='block';
   // Chart
-  if (otdrChart) otdrChart.destroy();
-  const ctx = document.getElementById('chart-otdr').getContext('2d');
-  const distances = events.map(e => e.distance);
-  const losses = events.map(e => e.loss);
-
-  // Build cumulative loss trace
-  let cumLoss = 0;
-  const traceY = events.map(e => { cumLoss += e.loss; return parseFloat(cumLoss.toFixed(3)); });
-
-  otdrChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: distances,
-      datasets: [
-        {
-          label: 'Perte cumulée (dB)',
-          data: traceY,
-          borderColor: '#00d4ff',
-          backgroundColor: 'rgba(0,212,255,0.1)',
-          fill: true,
-          tension: 0.3,
-          pointBackgroundColor: events.map(e => e.status === 'ALERTE' ? '#ff3c5a' : '#00d4ff'),
-          pointRadius: events.map(e => e.status === 'ALERTE' ? 6 : 3),
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { labels: { color: '#8fa3c8', font: { family: 'Share Tech Mono', size: 11 } } },
-        tooltip: {
-          backgroundColor: '#0d1528', borderColor: '#1e3358', borderWidth: 1,
-          callbacks: {
-            label: (ctx) => {
-              const ev = events[ctx.dataIndex];
-              return [`Perte: ${ev.loss} dB`, `Type: ${ev.type}`, `Réflexion: ${ev.reflection} dB`];
-            }
-          }
-        }
-      },
-      scales: {
-        x: { title: { display: true, text: 'Distance (km)', color: '#4a6080' }, ticks: { color: '#4a6080', font: { family: 'Share Tech Mono', size: 10 } }, grid: { color: 'rgba(30,51,88,0.4)' } },
-        y: { title: { display: true, text: 'Perte (dB)', color: '#4a6080' }, ticks: { color: '#4a6080', font: { family: 'Share Tech Mono', size: 10 } }, grid: { color: 'rgba(30,51,88,0.4)' } }
-      }
-    }
+  if(sorCh)sorCh.destroy();
+  let cum=0;const trY=evts.map(e=>{cum+=e.loss;return parseFloat(cum.toFixed(3));});
+  const ctx=document.getElementById('ch-otdr').getContext('2d');
+  sorCh=new Chart(ctx,{
+    type:'line',
+    data:{labels:evts.map(e=>e.dist),datasets:[{
+      label:'Perte cumulée (dB)',data:trY,
+      borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,.12)',fill:true,tension:.3,
+      pointBackgroundColor:evts.map(e=>e.status==='ALERTE'?'#ff3c5a':'#00d4ff'),
+      pointRadius:evts.map(e=>e.status==='ALERTE'?6:3)
+    }]},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#8fa8cc',font:{size:11}}}},
+      scales:{x:{title:{display:true,text:'Distance (km)',color:'#445870'},ticks:{color:'#445870',font:{size:10}},grid:{color:'rgba(26,48,80,.4)'}},
+              y:{title:{display:true,text:'Perte (dB)',color:'#445870'},ticks:{color:'#445870',font:{size:10}},grid:{color:'rgba(26,48,80,.4)'}}}}
   });
-
-  // Table
-  document.getElementById('otdr-events-body').innerHTML = events.map(e => `<tr>
-    <td style="font-family:var(--font-mono);color:var(--text3)">${e.num}</td>
-    <td style="font-family:var(--font-mono);color:var(--accent)">${e.distance} km</td>
-    <td>${e.type}</td>
-    <td style="font-family:var(--font-mono);color:${e.loss > 0.2 ? 'var(--warn)' : 'var(--text2)'}">${e.loss} dB</td>
-    <td style="font-family:var(--font-mono);color:var(--text3)">${e.reflection} dB</td>
-    <td><span class="badge ${e.status === 'ALERTE' ? 'badge-outsla' : e.status === 'FIN' ? 'badge-p2' : 'badge-insla'}">${e.status}</span></td>
-  </tr>`).join('');
-
-  document.getElementById('btn-export-otdr').disabled = false;
+  // Events list
+  document.getElementById('sor-evts-list').innerHTML=evts.map(e=>`
+    <div class="li">
+      <div style="font-size:11px;color:var(--t3);width:20px;text-align:center;flex-shrink:0">${e.num}</div>
+      <div class="li-body">
+        <div class="li-name" style="font-size:13px">${e.dist} km — ${e.type}</div>
+        <div class="li-sub">Perte: <span style="color:${e.loss>.2?'var(--w)':'var(--t2)'};font-weight:600">${e.loss} dB</span> · Réfl: ${e.refl} dB</div>
+      </div>
+      <span class="b ${e.status==='ALERTE'?'bot':e.status==='FIN'?'bp2':'bin'}">${e.status}</span>
+    </div>`).join('');
 }
 
-function handleKmzDrop(e) {
-  e.preventDefault();
-  document.getElementById('kmz-zone').classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file) processKmzFile(file);
-}
-function handleKmzFile(input) { if (input.files[0]) processKmzFile(input.files[0]); }
-
-function processKmzFile(file) {
-  if (!map) initMap();
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const ext = file.name.split('.').pop().toLowerCase();
-      let kmlText = '';
-      if (ext === 'kmz') {
-        // KMZ is a zip - need to extract KML
-        // For now, try reading as text (some KMZ are plain KML)
-        kmlText = new TextDecoder().decode(e.target.result);
-      } else {
-        kmlText = new TextDecoder().decode(e.target.result);
-      }
-      parseAndDisplayKml(kmlText);
-      toast('KMZ/KML chargé sur la carte', 'success');
-    } catch(err) {
-      toast('Erreur KMZ: ' + err.message, 'error');
-    }
+// PHOTO
+function loadPhoto(input) {
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    const img=document.getElementById('ph-prev');
+    img.src=e.target.result;img.style.display='block';
+    toast('Photo OTDR chargée ✓','s');
   };
-  reader.readAsArrayBuffer(file);
+  r.readAsDataURL(file);
 }
 
-function parseAndDisplayKml(kmlText) {
-  if (!map) initMap();
-  // Parse coordinates from KML
-  const coordMatches = kmlText.matchAll(/<coordinates>([\s\S]*?)<\/coordinates>/g);
-  const style = { color: '#00d4ff', weight: 3, opacity: 0.9 };
+// ════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════
+function S(id,val){const e=document.getElementById(id);if(e)e.textContent=val;}
 
-  for (const match of coordMatches) {
-    const coordStr = match[1].trim();
-    const coords = coordStr.split(/\s+/).map(c => {
-      const parts = c.split(',');
-      return parts.length >= 2 ? [parseFloat(parts[1]), parseFloat(parts[0])] : null;
-    }).filter(c => c && !isNaN(c[0]) && !isNaN(c[1]));
-
-    if (coords.length > 1) {
-      L.polyline(coords, style).addTo(map);
-      map.fitBounds(L.polyline(coords).getBounds());
-    } else if (coords.length === 1) {
-      L.circleMarker(coords[0], { radius: 8, fillColor: '#00d4ff', color: '#fff', weight: 2, fillOpacity: 0.9 }).addTo(map);
-    }
-  }
-
-  // Parse Placemarks
-  const placemarks = [...kmlText.matchAll(/<Placemark>([\s\S]*?)<\/Placemark>/g)];
-  placemarks.forEach(pm => {
-    const nameMatch = pm[1].match(/<name>(.*?)<\/name>/);
-    const coordMatch = pm[1].match(/<coordinates>([\s\S]*?)<\/coordinates>/);
-    if (nameMatch && coordMatch) {
-      const parts = coordMatch[1].trim().split(',');
-      if (parts.length >= 2) {
-        const lat = parseFloat(parts[1]);
-        const lng = parseFloat(parts[0]);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          L.marker([lat, lng]).addTo(map).bindPopup(`<b>${nameMatch[1]}</b>`);
-        }
-      }
-    }
-  });
+function toast(msg,t='i'){
+  const el=document.createElement('div');
+  el.className=`toast t${t}`;el.textContent=msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),3200);
 }
 
-function exportOtdrReport() {
-  toast('Export PDF rapport OTDR — fonctionnalité à venir', 'info');
-}
-
-// ═══════════════════════════════════════════════════════════
-// TOAST
-// ═══════════════════════════════════════════════════════════
-function toast(msg, type = 'info') {
-  const el = document.createElement('div');
-  el.className = `toast toast-${type}`;
-  el.textContent = msg;
-  document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), 3500);
-}
-
-// ═══════════════════════════════════════════════════════════
+// ════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  setLang(currentLang);
-  saveData();
-  refreshDashboard();
-  renderIncidentTable();
+// ════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  save();rdash();rinclist();
+});
+
+window.addEventListener('resize',()=>{
+  oMap?.invalidateSize();
+  const ow=document.getElementById('opt-wrap');
+  if(ow&&oMap){
+    const top=52,nav=58;
+    ow.style.height=(window.innerHeight-top-nav)+'px';
+  }
 });
 </script>
 
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
-}
+if('serviceWorker' in navigator)
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
 </script>
 </body>
 </html>
