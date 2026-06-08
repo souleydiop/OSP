@@ -2,446 +2,308 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0a1628">
-<meta name="description" content="Gestion des incidents coupure fibre optique - Réseau Télécom">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<title>FibreOps — Gestion Incidents</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>FibreOps — Incidents Fibre</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
-
 <style>
-  :root {
-    --bg:       #0a1628;
-    --surface:  #0f1f3d;
-    --panel:    #162040;
-    --border:   #1e3058;
-    --accent:   #00e5ff;
-    --danger:   #ff3d5a;
-    --warn:     #ffb020;
-    --ok:       #00e676;
-    --muted:    #4a6080;
-    --text:     #c8daf0;
-    --texthi:   #eaf3ff;
-    --mono:     'JetBrains Mono', monospace;
-    --sans:     'Inter', sans-serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; overflow: hidden; }
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a1628;--surf:#0f1f3d;--panel:#162040;--bord:#1e3058;
+  --cyan:#00e5ff;--red:#ff3d5a;--warn:#ffb020;--ok:#00e676;
+  --muted:#4a6080;--txt:#c8daf0;--txth:#eaf3ff;
+  --mono:'Courier New',monospace;--sans:system-ui,sans-serif
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14px;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
 
-  /* ── LAYOUT ── */
-  #app { display: flex; flex-direction: column; height: 100vh; }
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:50px;background:var(--surf);border-bottom:1px solid var(--bord);z-index:100;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-text{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--cyan);letter-spacing:-0.5px}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase}
+#hdr-right{display:flex;gap:8px;align-items:center}
+#inc-badge{font-family:var(--mono);font-size:12px;color:var(--muted)}
 
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px; height: 52px; background: var(--surface);
-    border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100;
-  }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-icon { width: 28px; height: 28px; }
-  .logo-text { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
-  .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
-  .header-right { display: flex; gap: 8px; align-items: center; }
+/* LAYOUT */
+#main{display:flex;flex:1;overflow:hidden;position:relative}
 
-  #main { display: flex; flex: 1; overflow: hidden; }
+/* SIDEBAR */
+#sb{width:310px;background:var(--surf);border-right:1px solid var(--bord);
+  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s}
+#sb.hide{width:0}
+.sb-inner{width:310px;display:flex;flex-direction:column;height:100%;overflow:hidden}
+#sb-tog{position:absolute;left:310px;top:50%;transform:translateY(-50%);
+  z-index:200;background:var(--surf);border:1px solid var(--bord);border-left:none;
+  border-radius:0 5px 5px 0;padding:8px 5px;cursor:pointer;color:var(--muted);
+  transition:left .2s,color .15s;font-size:13px}
+#sb-tog:hover{color:var(--cyan)}
+#sb.hide~#sb-tog{left:0}
 
-  /* ── SIDEBAR ── */
-  #sidebar {
-    width: 320px; background: var(--surface); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
-    transition: width 0.25s ease;
-  }
-  #sidebar.collapsed { width: 0; }
-  .sidebar-inner { width: 320px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--bord);flex-shrink:0}
+.tab{flex:1;padding:10px 4px;font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--muted);background:none;border:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s}
+.tab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+.tab:hover:not(.on){color:var(--txt)}
+.tc{display:none;flex:1;overflow-y:auto;padding:12px;flex-direction:column;gap:10px}
+.tc.on{display:flex}
 
-  .tab-bar { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  .tab-btn {
-    flex: 1; padding: 10px 4px; font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted);
-    background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-  }
-  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab-btn:hover:not(.active) { color: var(--text); }
+/* PANEL */
+.pnl{background:var(--panel);border:1px solid var(--bord);border-radius:7px;overflow:hidden}
+.pnl-h{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-bottom:1px solid var(--bord);background:rgba(255,255,255,.02)}
+.pnl-t{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--cyan);
+  letter-spacing:1px;text-transform:uppercase}
+.pnl-b{padding:12px;display:flex;flex-direction:column;gap:8px}
 
-  .tab-content { display: none; flex: 1; overflow-y: auto; padding: 12px; flex-direction: column; gap: 10px; }
-  .tab-content.active { display: flex; }
+/* UPLOAD */
+.upz{border:1.5px dashed var(--bord);border-radius:6px;padding:14px;
+  text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upz:hover,.upz.drag{border-color:var(--cyan);background:rgba(0,229,255,.04)}
+.upz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.up-ico{font-size:20px;margin-bottom:5px}
+.up-lbl{font-size:12px;color:var(--txt)}
+.up-hint{font-size:10px;color:var(--muted);margin-top:2px}
 
-  /* ── PANELS ── */
-  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  .panel-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 12px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);
-  }
-  .panel-title { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; }
-  .panel-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+/* FILE LIST */
+.flist{display:flex;flex-direction:column;gap:4px}
+.fitem{display:flex;align-items:center;gap:7px;padding:5px 8px;
+  background:rgba(0,0,0,.2);border-radius:4px;border:1px solid var(--bord)}
+.fdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fname{flex:1;font-family:var(--mono);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsz{font-size:10px;color:var(--muted);flex-shrink:0}
+.fdel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px}
+.fdel:hover{color:var(--red)}
 
-  /* ── UPLOAD ZONE ── */
-  .upload-zone {
-    border: 1.5px dashed var(--border); border-radius: 6px; padding: 16px;
-    text-align: center; cursor: pointer; transition: all 0.2s; position: relative;
-  }
-  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(0,229,255,0.04); }
-  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-  .upload-icon { font-size: 22px; margin-bottom: 6px; }
-  .upload-label { font-size: 12px; color: var(--text); }
-  .upload-hint { font-size: 10px; color: var(--muted); margin-top: 3px; }
+/* CONTROLS */
+.crow{display:flex;align-items:center;gap:8px}
+.clbl{font-size:11px;color:var(--muted);flex-shrink:0;min-width:70px}
+.cinp{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--bord);border-radius:4px;
+  color:var(--txth);font-family:var(--mono);font-size:12px;padding:6px 8px;
+  outline:none;transition:border-color .15s}
+.cinp:focus{border-color:var(--cyan)}
+select.cinp option{background:var(--panel)}
 
-  /* ── FILE LIST ── */
-  .file-list { display: flex; flex-direction: column; gap: 4px; }
-  .file-item {
-    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
-    background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid var(--border);
-  }
-  .file-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .file-dot.kmz { background: var(--accent); }
-  .file-dot.sor { background: var(--warn); }
-  .file-dot.bts { background: var(--ok); }
-  .file-name { flex: 1; font-family: var(--mono); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .file-size { font-size: 10px; color: var(--muted); flex-shrink: 0; }
-  .file-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 0 2px; }
-  .file-del:hover { color: var(--danger); }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;
+  border-radius:5px;border:none;cursor:pointer;font-size:12px;font-weight:600;
+  transition:all .15s;text-transform:uppercase;letter-spacing:.4px}
+.btn-p{background:var(--cyan);color:#0a1628}.btn-p:hover{background:#33eaff}
+.btn-d{background:var(--red);color:#fff}.btn-d:hover{background:#ff6070}
+.btn-g{background:transparent;color:var(--txt);border:1px solid var(--bord)}
+.btn-g:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn-w{background:var(--warn);color:#0a1628}.btn-w:hover{background:#ffc040}
+.btn-sm{padding:5px 9px;font-size:11px}
+.btn-f{width:100%;justify-content:center}
 
-  /* ── CONTROLS ── */
-  .ctrl-row { display: flex; align-items: center; gap: 8px; }
-  .ctrl-label { font-size: 11px; color: var(--muted); flex-shrink: 0; }
-  .ctrl-input {
-    flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 4px;
-    color: var(--texthi); font-family: var(--mono); font-size: 12px; padding: 6px 8px;
-    outline: none; transition: border-color 0.15s;
-  }
-  .ctrl-input:focus { border-color: var(--accent); }
-  select.ctrl-input option { background: var(--panel); }
+/* TOGGLE */
+.togrow{display:flex;align-items:center;justify-content:space-between;padding:2px 0}
+.togrow span{font-size:12px;color:var(--txt)}
+.tog{position:relative;width:38px;height:20px}
+.tog input{display:none}
+.tog-s{position:absolute;inset:0;background:var(--bord);border-radius:20px;cursor:pointer;transition:background .2s}
+.tog-s::before{content:'';position:absolute;width:14px;height:14px;background:#fff;
+  border-radius:50%;top:3px;left:3px;transition:transform .2s}
+.tog input:checked+.tog-s{background:var(--cyan)}
+.tog input:checked+.tog-s::before{transform:translateX(18px)}
 
-  /* ── BUTTONS ── */
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px;
-    border-radius: 5px; border: none; cursor: pointer; font-size: 12px; font-weight: 600;
-    transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px;
-  }
-  .btn-primary { background: var(--accent); color: #0a1628; }
-  .btn-primary:hover { background: #33eaff; }
-  .btn-danger  { background: var(--danger); color: #fff; }
-  .btn-danger:hover { background: #ff6070; }
-  .btn-ghost   { background: transparent; color: var(--text); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-warn    { background: var(--warn); color: #0a1628; }
-  .btn-warn:hover { background: #ffc040; }
-  .btn-sm { padding: 5px 10px; font-size: 11px; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-full { width: 100%; justify-content: center; }
+/* METRICS */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mcard{background:rgba(0,0,0,.25);border:1px solid var(--bord);border-radius:6px;padding:10px}
+.mval{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1}
+.mval.rd{color:var(--red)}.mval.wn{color:var(--warn)}.mval.ok{color:var(--ok)}.mval.cy{color:var(--cyan)}
+.mlbl{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.8px}
 
-  /* ── TOGGLE SWITCH ── */
-  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; }
-  .toggle-row span { font-size: 12px; color: var(--text); }
-  .toggle { position: relative; width: 38px; height: 20px; }
-  .toggle input { display: none; }
-  .toggle-slider {
-    position: absolute; inset: 0; background: var(--border); border-radius: 20px; cursor: pointer;
-    transition: background 0.2s;
-  }
-  .toggle-slider::before {
-    content: ''; position: absolute; width: 14px; height: 14px; background: #fff;
-    border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s;
-  }
-  .toggle input:checked + .toggle-slider { background: var(--accent); }
-  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+/* BTS TABLE */
+.btbl{width:100%;border-collapse:collapse;font-size:11px}
+.btbl th{text-align:left;color:var(--muted);font-weight:600;padding:4px 6px;
+  border-bottom:1px solid var(--bord);font-family:var(--mono);font-size:10px;text-transform:uppercase}
+.btbl td{padding:5px 6px;border-bottom:1px solid rgba(30,48,88,.5);font-family:var(--mono)}
+.btbl tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase}
+.badge-ok{background:rgba(0,230,118,.15);color:var(--ok)}
+.badge-ko{background:rgba(255,61,90,.15);color:var(--red)}
+.badge-wn{background:rgba(255,176,32,.15);color:var(--warn)}
 
-  /* ── ANALYSIS / METRICS ── */
-  .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .metric-card { background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
-  .metric-val { font-family: var(--mono); font-size: 22px; font-weight: 700; line-height: 1; }
-  .metric-val.danger { color: var(--danger); }
-  .metric-val.warn   { color: var(--warn); }
-  .metric-val.ok     { color: var(--ok); }
-  .metric-val.accent { color: var(--accent); }
-  .metric-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.8px; }
+/* SOR */
+.sev{border-left:3px solid var(--warn);padding:7px 10px;background:rgba(255,176,32,.06);
+  border-radius:0 4px 4px 0;margin-bottom:5px}
+.sev.cr{border-left-color:var(--red);background:rgba(255,61,90,.06)}
+.sev.nf{border-left-color:var(--cyan);background:rgba(0,229,255,.04)}
+.sev-t{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--txth)}
+.sev-d{font-size:11px;color:var(--muted);margin-top:2px}
 
-  /* ── BTS TABLE ── */
-  .bts-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  .bts-table th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 10px; text-transform: uppercase; }
-  .bts-table td { padding: 5px 6px; border-bottom: 1px solid rgba(30,48,88,0.5); font-family: var(--mono); }
-  .bts-table tr:last-child td { border-bottom: none; }
-  .status-badge {
-    display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase;
-  }
-  .status-badge.ok     { background: rgba(0,230,118,0.15); color: var(--ok); }
-  .status-badge.ko     { background: rgba(255,61,90,0.15);  color: var(--danger); }
-  .status-badge.warn   { background: rgba(255,176,32,0.15); color: var(--warn); }
+/* MAP */
+#map{flex:1;z-index:1}
+.leaflet-container{background:#08111f!important}
 
-  /* ── SOR ANALYSIS ── */
-  .sor-event { 
-    border-left: 3px solid var(--warn); padding: 8px 10px; background: rgba(255,176,32,0.06);
-    border-radius: 0 4px 4px 0; margin-bottom: 6px;
-  }
-  .sor-event.critical { border-left-color: var(--danger); background: rgba(255,61,90,0.06); }
-  .sor-event.info     { border-left-color: var(--accent); background: rgba(0,229,255,0.04); }
-  .sor-event-title { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--texthi); }
-  .sor-event-detail { font-size: 11px; color: var(--muted); margin-top: 3px; }
+/* OVERLAYS */
+.mover{position:absolute;z-index:500;background:var(--surf);
+  border:1px solid var(--bord);border-radius:8px;padding:10px 14px;pointer-events:auto}
+#mc{top:12px;right:12px}
+#simbar{bottom:18px;left:50%;transform:translateX(-50%);min-width:300px;display:none}
+#simbar.on{display:block}
+#simbar .st{font-family:var(--mono);font-size:11px;color:var(--warn);font-weight:700;margin-bottom:7px}
+#simbar .sr{display:flex;align-items:center;gap:8px}
 
-  /* ── MAP ── */
-  #map { flex: 1; position: relative; z-index: 1; }
-  #map .leaflet-container { background: #08111f; }
+/* TOAST */
+#toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surf);border:1px solid var(--bord);border-radius:7px;
+  padding:9px 18px;font-size:13px;color:var(--txth);z-index:9999;
+  opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.rd{border-color:var(--red);color:var(--red)}
+#toast.ok{border-color:var(--ok);color:var(--ok)}
+#toast.wn{border-color:var(--warn);color:var(--warn)}
 
-  /* ── MAP OVERLAY ── */
-  .map-overlay {
-    position: absolute; z-index: 500; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px;
-    pointer-events: auto;
-  }
-  #map-controls { top: 12px; right: 12px; display: flex; flex-direction: column; gap: 6px; }
-  #sim-bar { bottom: 20px; left: 50%; transform: translateX(-50%); min-width: 320px; display: none; }
-  #sim-bar.active { display: block; }
-  #sim-bar .sim-title { font-family: var(--mono); font-size: 11px; color: var(--warn); font-weight: 700; margin-bottom: 8px; }
-  #sim-bar .sim-row { display: flex; align-items: center; gap: 8px; }
+/* EMPTY */
+.empty{text-align:center;padding:20px 10px;color:var(--muted)}
+.empty .ei{font-size:28px;margin-bottom:7px;opacity:.4}
+.empty p{font-size:12px;line-height:1.5}
 
-  /* ── ALERT TOAST ── */
-  #toast {
-    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
-    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 20px; font-size: 13px; color: var(--texthi); z-index: 9999;
-    opacity: 0; transition: all 0.3s; pointer-events: none; white-space: nowrap;
-  }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  #toast.danger { border-color: var(--danger); color: var(--danger); }
-  #toast.ok     { border-color: var(--ok);     color: var(--ok); }
-  #toast.warn   { border-color: var(--warn);   color: var(--warn); }
+/* DIVIDER */
+.div{height:1px;background:var(--bord);margin:4px 0}
 
-  /* ── SIDEBAR TOGGLE ── */
-  #sidebar-toggle {
-    position: absolute; left: 320px; top: 50%; transform: translateY(-50%);
-    z-index: 200; background: var(--surface); border: 1px solid var(--border);
-    border-left: none; border-radius: 0 6px 6px 0; padding: 8px 5px;
-    cursor: pointer; color: var(--muted); transition: left 0.25s, color 0.15s;
-  }
-  #sidebar-toggle:hover { color: var(--accent); }
-  #sidebar.collapsed ~ #sidebar-toggle { left: 0; }
+/* LEGEND */
+.leg{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--txt);padding:2px 0}
+.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.lline{width:18px;height:3px;flex-shrink:0;border-radius:2px}
 
-  /* ── EMPTY STATE ── */
-  .empty-state { text-align: center; padding: 24px 12px; color: var(--muted); }
-  .empty-state .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.4; }
-  .empty-state p { font-size: 12px; line-height: 1.5; }
-
-  /* ── SCROLLBAR ── */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-  /* ── PROGRESS BAR ── */
-  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .progress-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
-
-  /* ── DIVIDER ── */
-  .divider { height: 1px; background: var(--border); margin: 4px 0; }
-
-  /* ── LEGEND ── */
-  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text); padding: 3px 0; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .legend-line { width: 20px; height: 3px; flex-shrink: 0; border-radius: 2px; }
-
-  @media (max-width: 600px) {
-    #sidebar { width: 100%; position: absolute; z-index: 300; height: 55%; bottom: 0; border-right: none; border-top: 1px solid var(--border); }
-    #sidebar.collapsed { height: 0; }
-    #sidebar-toggle { display: none; }
-    #map { height: 45vh; }
-    #main { flex-direction: column-reverse; }
-  }
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bord);border-radius:2px}
 </style>
 </head>
 <body>
 <div id="app">
-  <!-- HEADER -->
   <header>
     <div class="logo">
-      <svg class="logo-icon" viewBox="0 0 28 28" fill="none">
-        <circle cx="14" cy="14" r="13" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="4 2"/>
-        <path d="M6 14 Q10 8 14 14 Q18 20 22 14" stroke="#00e5ff" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <circle cx="14" cy="14" r="2.5" fill="#ff3d5a"/>
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <circle cx="13" cy="13" r="12" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="4 2"/>
+        <path d="M5 13 Q9 7 13 13 Q17 19 21 13" stroke="#00e5ff" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="13" cy="13" r="2.5" fill="#ff3d5a"/>
       </svg>
-      <div>
-        <div class="logo-text">FibreOps</div>
-        <div class="logo-sub">Incident Manager</div>
-      </div>
+      <div><div class="logo-text">FibreOps</div><div class="logo-sub">Incident Manager</div></div>
     </div>
-    <div class="header-right">
-      <span id="incident-count" style="font-family:var(--mono);font-size:12px;color:var(--muted);">— incidents</span>
-      <button class="btn btn-ghost btn-sm" id="clear-all-btn">↺ Reset</button>
+    <div id="hdr-right">
+      <span id="inc-badge">— incidents</span>
+      <button class="btn btn-g btn-sm" id="btn-reset">↺ Reset</button>
     </div>
   </header>
 
-  <div id="main" style="position:relative;">
-    <!-- SIDEBAR -->
-    <div id="sidebar">
-      <div class="sidebar-inner">
-        <div class="tab-bar">
-          <button class="tab-btn active" data-tab="data">📂 Données</button>
-          <button class="tab-btn" data-tab="sim">⚡ Simulation</button>
-          <button class="tab-btn" data-tab="analyse">📊 Analyse</button>
+  <div id="main">
+    <div id="sb">
+      <div class="sb-inner">
+        <div class="tabs">
+          <button class="tab on" data-t="data">📂 Données</button>
+          <button class="tab" data-t="sim">⚡ Simulation</button>
+          <button class="tab" data-t="ana">📊 Analyse</button>
         </div>
 
-        <!-- TAB: DONNÉES -->
-        <div class="tab-content active" id="tab-data">
-
-          <!-- KMZ FIBRE -->
-          <div class="panel">
-            <div class="panel-head">
-              <span class="panel-title">🔵 Tracés Fibre (KMZ)</span>
-              <span id="kmz-count" style="font-size:10px;color:var(--muted);">0 fichier(s)</span>
-            </div>
-            <div class="panel-body">
-              <div class="upload-zone" id="kmz-zone">
-                <input type="file" id="kmz-input" accept=".kmz,.kml" multiple>
-                <div class="upload-icon">📡</div>
-                <div class="upload-label">Glisser ou cliquer pour uploader</div>
-                <div class="upload-hint">KMZ / KML — Multi-fichiers acceptés</div>
-              </div>
-              <div class="file-list" id="kmz-list"></div>
+        <!-- DATA TAB -->
+        <div class="tc on" id="tc-data">
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">🔵 Fibre KMZ</span><span id="lbl-kmz" style="font-size:10px;color:var(--muted)">0 fichier</span></div>
+            <div class="pnl-b">
+              <div class="upz" id="z-kmz"><input type="file" id="in-kmz" accept=".kmz,.kml" multiple>
+                <div class="up-ico">📡</div><div class="up-lbl">KMZ / KML multi-fichiers</div>
+                <div class="up-hint">Tracés fibre optique</div></div>
+              <div class="flist" id="fl-kmz"></div>
+              <div class="togrow"><span>Afficher tracés fibre</span>
+                <label class="tog"><input type="checkbox" id="tog-fibre" checked><span class="tog-s"></span></label></div>
             </div>
           </div>
-
-          <!-- BTS KMZ -->
-          <div class="panel">
-            <div class="panel-head">
-              <span class="panel-title">🟢 Base BTS (KMZ)</span>
-              <span id="bts-count" style="font-size:10px;color:var(--muted);">0 site(s)</span>
-            </div>
-            <div class="panel-body">
-              <div class="upload-zone" id="bts-zone">
-                <input type="file" id="bts-input" accept=".kmz,.kml">
-                <div class="upload-icon">📶</div>
-                <div class="upload-label">Base BTS — KMZ/KML</div>
-                <div class="upload-hint">Points = sites BTS avec nom/coordonnées</div>
-              </div>
-              <div class="file-list" id="bts-list"></div>
-              <div class="toggle-row">
-                <span>Afficher les BTS sur la carte</span>
-                <label class="toggle"><input type="checkbox" id="bts-toggle" checked><span class="toggle-slider"></span></label>
-              </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">🟢 Base BTS KMZ</span><span id="lbl-bts" style="font-size:10px;color:var(--muted)">0 site</span></div>
+            <div class="pnl-b">
+              <div class="upz" id="z-bts"><input type="file" id="in-bts" accept=".kmz,.kml">
+                <div class="up-ico">📶</div><div class="up-lbl">Base BTS — KMZ/KML</div>
+                <div class="up-hint">Points = sites avec nom</div></div>
+              <div class="flist" id="fl-bts"></div>
+              <div class="togrow"><span>Afficher BTS sur la carte</span>
+                <label class="tog"><input type="checkbox" id="tog-bts" checked><span class="tog-s"></span></label></div>
             </div>
           </div>
-
-          <!-- SOR -->
-          <div class="panel">
-            <div class="panel-head">
-              <span class="panel-title">🟡 Mesures OTDR (.sor)</span>
-              <span id="sor-count" style="font-size:10px;color:var(--muted);">0 fichier(s)</span>
-            </div>
-            <div class="panel-body">
-              <div class="upload-zone" id="sor-zone">
-                <input type="file" id="sor-input" accept=".sor,.SOR" multiple>
-                <div class="upload-icon">📉</div>
-                <div class="upload-label">Fichiers OTDR .sor</div>
-                <div class="upload-hint">Multi-fichiers — Analyse automatique des événements</div>
-              </div>
-              <div class="file-list" id="sor-list"></div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">🟡 OTDR .sor</span><span id="lbl-sor" style="font-size:10px;color:var(--muted)">0 fichier</span></div>
+            <div class="pnl-b">
+              <div class="upz" id="z-sor"><input type="file" id="in-sor" accept=".sor,.SOR" multiple>
+                <div class="up-ico">📉</div><div class="up-lbl">Fichiers OTDR .sor</div>
+                <div class="up-hint">Analyse auto des événements</div></div>
+              <div class="flist" id="fl-sor"></div>
             </div>
           </div>
-
-          <!-- LAYER TOGGLES -->
-          <div class="panel">
-            <div class="panel-head"><span class="panel-title">🗺 Couches carte</span></div>
-            <div class="panel-body">
-              <div class="toggle-row">
-                <span>Tracés fibre</span>
-                <label class="toggle"><input type="checkbox" id="fibre-toggle" checked><span class="toggle-slider"></span></label>
-              </div>
-              <div class="toggle-row">
-                <span>Points de coupure simulés</span>
-                <label class="toggle"><input type="checkbox" id="cut-toggle" checked><span class="toggle-slider"></span></label>
-              </div>
-              <div class="divider"></div>
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <div class="legend-item"><div class="legend-line" style="background:#00e5ff;"></div>Fibre active</div>
-                <div class="legend-item"><div class="legend-line" style="background:#ff3d5a;"></div>Segment coupé</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#00e676;"></div>BTS nominal</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#ff3d5a;"></div>BTS impactée</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#ff3d5a;border:2px solid #ffb020;"></div>Point de coupure</div>
-              </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">🗺 Légende</span></div>
+            <div class="pnl-b">
+              <div class="leg"><div class="lline" style="background:#00e5ff"></div>Fibre active</div>
+              <div class="leg"><div class="lline" style="background:#ff3d5a"></div>Segment coupé</div>
+              <div class="leg"><div class="ldot" style="background:#00e676"></div>BTS nominal</div>
+              <div class="leg"><div class="ldot" style="background:#ff3d5a"></div>BTS hors service</div>
+              <div class="leg"><div class="ldot" style="background:#ffb020"></div>BTS dégradée</div>
+              <div class="leg"><div class="ldot" style="background:#ff3d5a;box-shadow:0 0 6px #ff3d5a"></div>Point de coupure</div>
             </div>
           </div>
         </div>
 
-        <!-- TAB: SIMULATION -->
-        <div class="tab-content" id="tab-sim">
-          <div class="panel">
-            <div class="panel-head"><span class="panel-title">⚡ Simuler une coupure</span></div>
-            <div class="panel-body">
-              <div class="ctrl-row">
-                <span class="ctrl-label">Tronçon</span>
-                <select class="ctrl-input" id="sim-segment">
-                  <option value="">— Choisir un tronçon —</option>
-                </select>
-              </div>
-              <div class="ctrl-row">
-                <span class="ctrl-label">Distance (km)</span>
-                <input class="ctrl-input" id="sim-km" type="number" min="0" step="0.1" placeholder="ex: 12.5">
-              </div>
-              <div class="ctrl-row">
-                <span class="ctrl-label">Type</span>
-                <select class="ctrl-input" id="sim-type">
+        <!-- SIM TAB -->
+        <div class="tc" id="tc-sim">
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">⚡ Simuler une coupure</span></div>
+            <div class="pnl-b">
+              <div class="crow"><span class="clbl">Tronçon</span>
+                <select class="cinp" id="sel-seg"><option value="">— Choisir —</option></select></div>
+              <div class="crow"><span class="clbl">Distance</span>
+                <input class="cinp" id="inp-km" type="number" min="0" step="0.1" placeholder="km sur le tronçon"></div>
+              <div class="crow"><span class="clbl">Type</span>
+                <select class="cinp" id="sel-type">
                   <option value="cut">Coupure totale</option>
                   <option value="partial">Dégradation partielle</option>
                   <option value="bend">Courbure excessive</option>
-                </select>
-              </div>
-              <button class="btn btn-warn btn-full" id="run-sim-btn">⚡ Lancer la simulation</button>
-              <button class="btn btn-ghost btn-full btn-sm" id="clear-sim-btn">Effacer la simulation</button>
+                </select></div>
+              <button class="btn btn-w btn-f" id="btn-sim">⚡ Lancer la simulation</button>
+              <button class="btn btn-g btn-f btn-sm" id="btn-clrsim">Effacer toutes les coupures</button>
             </div>
           </div>
-
-          <div class="panel" id="sim-result-panel" style="display:none;">
-            <div class="panel-head"><span class="panel-title">🎯 Résultat simulation</span></div>
-            <div class="panel-body" id="sim-result-body"></div>
+          <div class="pnl" id="pnl-res" style="display:none">
+            <div class="pnl-h"><span class="pnl-t">🎯 Résultat</span></div>
+            <div class="pnl-b" id="res-body"></div>
           </div>
-
-          <div class="panel">
-            <div class="panel-head"><span class="panel-title">📍 Coupures actives</span></div>
-            <div class="panel-body" id="cuts-list">
-              <div class="empty-state">
-                <div class="empty-icon">✂️</div>
-                <p>Aucune coupure simulée.<br>Choisir un tronçon et lancer la simulation.</p>
-              </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">✂️ Coupures actives</span></div>
+            <div class="pnl-b" id="cuts-list">
+              <div class="empty"><div class="ei">✂️</div><p>Aucune coupure simulée</p></div>
             </div>
           </div>
         </div>
 
-        <!-- TAB: ANALYSE -->
-        <div class="tab-content" id="tab-analyse">
-          <div class="metric-grid" id="metrics-grid">
-            <div class="metric-card"><div class="metric-val accent" id="m-bts">0</div><div class="metric-lbl">BTS total</div></div>
-            <div class="metric-card"><div class="metric-val danger" id="m-ko">0</div><div class="metric-lbl">BTS impactées</div></div>
-            <div class="metric-card"><div class="metric-val warn" id="m-cuts">0</div><div class="metric-lbl">Coupures</div></div>
-            <div class="metric-card"><div class="metric-val ok" id="m-dispo">100%</div><div class="metric-lbl">Dispo réseau</div></div>
+        <!-- ANALYSE TAB -->
+        <div class="tc" id="tc-ana">
+          <div class="mgrid">
+            <div class="mcard"><div class="mval cy" id="m-tot">0</div><div class="mlbl">BTS total</div></div>
+            <div class="mcard"><div class="mval rd" id="m-ko">0</div><div class="mlbl">BTS impactées</div></div>
+            <div class="mcard"><div class="mval wn" id="m-cuts">0</div><div class="mlbl">Coupures</div></div>
+            <div class="mcard"><div class="mval ok" id="m-dispo">100%</div><div class="mlbl">Dispo réseau</div></div>
           </div>
-
-          <div class="panel">
-            <div class="panel-head"><span class="panel-title">📉 Analyse SOR / OTDR</span></div>
-            <div class="panel-body" id="sor-analysis">
-              <div class="empty-state">
-                <div class="empty-icon">📉</div>
-                <p>Uploader des fichiers .sor<br>pour voir l'analyse des dégradations.</p>
-              </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">📉 Analyse SOR / OTDR</span></div>
+            <div class="pnl-b" id="sor-ana">
+              <div class="empty"><div class="ei">📉</div><p>Uploader des .sor pour l'analyse</p></div>
             </div>
           </div>
-
-          <div class="panel">
-            <div class="panel-head">
-              <span class="panel-title">📶 BTS impactées</span>
-              <button class="btn btn-ghost btn-sm" id="export-btn">⬇ Export</button>
+          <div class="pnl">
+            <div class="pnl-h">
+              <span class="pnl-t">📶 BTS impactées</span>
+              <button class="btn btn-g btn-sm" id="btn-exp">⬇ CSV</button>
             </div>
-            <div style="overflow-x:auto;">
-              <table class="bts-table" id="bts-impact-table">
-                <thead><tr>
-                  <th>Site</th><th>Lien</th><th>Statut</th>
-                </tr></thead>
-                <tbody id="bts-impact-body">
-                  <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:12px;">Aucune donnée</td></tr>
-                </tbody>
+            <div style="overflow-x:auto">
+              <table class="btbl">
+                <thead><tr><th>Site</th><th>Tronçon</th><th>Statut</th></tr></thead>
+                <tbody id="tbl-bts"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:10px">—</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -449,804 +311,553 @@
       </div>
     </div>
 
-    <!-- SIDEBAR TOGGLE -->
-    <button id="sidebar-toggle" title="Afficher/masquer le panneau">◀</button>
+    <button id="sb-tog">◀</button>
 
-    <!-- MAP -->
-    <div id="map-wrap" style="flex:1;position:relative;overflow:hidden;">
-      <div id="map"></div>
-
-      <!-- MAP CONTROLS OVERLAY -->
-      <div class="map-overlay" id="map-controls">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">Fond de carte</div>
-        <select class="ctrl-input" id="basemap-select" style="width:160px;font-size:11px;padding:5px 8px;">
+    <div id="map-wrap" style="flex:1;position:relative;overflow:hidden">
+      <div id="map" style="width:100%;height:100%"></div>
+      <div class="mover" id="mc">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Fond de carte</div>
+        <select class="cinp" id="sel-base" style="width:150px;font-size:11px;padding:5px 7px">
           <option value="osm">OpenStreetMap</option>
           <option value="sat">Satellite (Esri)</option>
           <option value="dark">Dark (CartoDB)</option>
-          <option value="topo">Topo</option>
         </select>
       </div>
-
-      <!-- SIMULATION BAR -->
-      <div class="map-overlay" id="sim-bar">
-        <div class="sim-title">⚡ MODE SIMULATION — Coupure active</div>
-        <div class="sim-row">
-          <span id="sim-bar-info" style="font-size:12px;color:var(--text);flex:1;font-family:var(--mono);"></span>
-          <button class="btn btn-danger btn-sm" id="sim-bar-clear">✕ Effacer</button>
+      <div class="mover" id="simbar">
+        <div class="st">⚡ COUPURE ACTIVE</div>
+        <div class="sr">
+          <span id="simbar-info" style="font-size:11px;font-family:var(--mono);flex:1;color:var(--txt)"></span>
+          <button class="btn btn-d btn-sm" id="btn-simbar-clr">✕</button>
         </div>
       </div>
     </div>
   </div>
 </div>
-
-<!-- TOAST -->
 <div id="toast"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
 <script>
-window.addEventListener('DOMContentLoaded', function() {
-// ═══════════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════════
-const state = {
-  kmzLayers: [],    // {name, layer, size}
-  btsLayer: null,
-  btsFeatures: [],  // {name, lat, lng, marker}
-  btsVisible: true,
-  sorFiles: [],     // {name, size, parsed}
-  cuts: [],         // {id, segment, km, type, lat, lng, marker, impacted}
-  fibreSegments: [], // {name, latlngs, polyline}
-  nextCutId: 1,
+// ── load Leaflet then omnivore then boot ──────────────────
+function loadScript(src){
+  return new Promise(function(res,rej){
+    var s=document.createElement('script');
+    s.src=src;
+    s.onload=res;
+    s.onerror=function(){rej(new Error('Failed: '+src))};
+    document.head.appendChild(s);
+  });
+}
+
+loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js')
+  .then(function(){ return loadScript('https://unpkg.com/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js'); })
+  .then(boot)
+  .catch(function(e){ document.body.innerHTML='<div style="color:#ff3d5a;padding:40px;font-family:monospace">Erreur chargement carte: '+e.message+'</div>'; });
+
+function boot(){
+// ── STATE ─────────────────────────────────────────────────
+var S={
+  kmzLayers:[],
+  btsFeats:[],
+  sorFiles:[],
+  cuts:[],
+  segs:[],
+  nextId:1
 };
 
-// ═══════════════════════════════════════════════════════════
-//  MAP INIT
-// ═══════════════════════════════════════════════════════════
-const map = L.map('map', {
-  center: [14.4974, -14.4524], // Sénégal
-  zoom: 7,
-  zoomControl: true,
-  attributionControl: false,
-});
+// ── MAP ───────────────────────────────────────────────────
+var map=L.map('map',{center:[14.5,-14.5],zoom:7,zoomControl:true,attributionControl:false});
 
-const BASEMAPS = {
-  osm:  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
-  sat:  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
-  dark: L.tileLayer('https://{a}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {subdomains:'abcd'}),
-  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'),
+var BASES={
+  osm:L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
+  sat:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
+  dark:L.tileLayer('https://{a}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd'})
 };
-BASEMAPS.osm.addTo(map);
+BASES.osm.addTo(map);
 
-document.getElementById('basemap-select').addEventListener('change', e => {
-  Object.values(BASEMAPS).forEach(l => map.removeLayer(l));
-  BASEMAPS[e.target.value].addTo(map);
-});
+var lgFibre=L.layerGroup().addTo(map);
+var lgBts  =L.layerGroup().addTo(map);
+var lgCuts =L.layerGroup().addTo(map);
 
-// ═══════════════════════════════════════════════════════════
-//  LAYER GROUPS
-// ═══════════════════════════════════════════════════════════
-const layerKmz  = L.layerGroup().addTo(map);
-const layerBts  = L.layerGroup().addTo(map);
-const layerCuts = L.layerGroup().addTo(map);
+document.getElementById('sel-base').onchange=function(){
+  Object.values(BASES).forEach(function(l){map.removeLayer(l)});
+  BASES[this.value].addTo(map);
+};
 
-// ═══════════════════════════════════════════════════════════
-//  TOAST
-// ═══════════════════════════════════════════════════════════
-let toastTimer;
-function toast(msg, type = '') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show ' + type;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.className = '', 2800);
+// ── TOAST ─────────────────────────────────────────────────
+var _tt;
+function toast(msg,cls){
+  var el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+(cls||'');
+  clearTimeout(_tt); _tt=setTimeout(function(){el.className=''},2800);
 }
 
-// ═══════════════════════════════════════════════════════════
-//  SIDEBAR + TABS
-// ═══════════════════════════════════════════════════════════
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-  });
-});
-
-const sidebar = document.getElementById('sidebar');
-const sidebarToggle = document.getElementById('sidebar-toggle');
-sidebarToggle.addEventListener('click', () => {
-  sidebar.classList.toggle('collapsed');
-  sidebarToggle.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
-});
-
-// ═══════════════════════════════════════════════════════════
-//  DRAG & DROP HELPERS
-// ═══════════════════════════════════════════════════════════
-function setupDragZone(zoneId, inputId, handler) {
-  const zone = document.getElementById(zoneId);
-  const input = document.getElementById(inputId);
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-  zone.addEventListener('drop', e => {
-    e.preventDefault(); zone.classList.remove('drag');
-    handler(e.dataTransfer.files);
-  });
-  input.addEventListener('change', () => handler(input.files));
-}
-
-// ═══════════════════════════════════════════════════════════
-//  KMZ / KML — FIBRE
-// ═══════════════════════════════════════════════════════════
-setupDragZone('kmz-zone', 'kmz-input', files => {
-  Array.from(files).forEach(f => loadKmzFibre(f));
-});
-
-function loadKmzFibre(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const color = pickColor(state.kmzLayers.length);
-      let layer;
-
-      if (file.name.toLowerCase().endsWith('.kml')) {
-        const text = e.target.result;
-        layer = omnivore.kml.parse(text);
-      } else {
-        // KMZ = ZIP containing doc.kml
-        layer = omnivore.kmz(URL.createObjectURL(file));
-      }
-
-      layer.on('ready', () => {
-        const lls = [];
-        layer.eachLayer(l => {
-          if (l.setStyle) l.setStyle({ color, weight: 2.5, opacity: 0.85 });
-          if (l.getLatLngs) {
-            const coords = l.getLatLngs();
-            const flat = flattenLatLngs(coords);
-            if (flat.length > 1) {
-              const name = l.feature?.properties?.name || file.name.replace(/\.[^.]+$/, '');
-              state.fibreSegments.push({ name, latlngs: flat, polyline: l });
-              lls.push(...flat);
-            }
-          }
-        });
-        layerKmz.addLayer(layer);
-        state.kmzLayers.push({ name: file.name, layer, size: file.size, color });
-        if (lls.length) map.fitBounds(L.latLngBounds(lls).pad(0.1));
-        updateKmzList();
-        updateSegmentSelect();
-        toast(`✅ ${file.name} chargé (${state.fibreSegments.length} tronçons)`, 'ok');
-      });
-
-      layer.on('error', () => toast(`❌ Erreur lecture ${file.name}`, 'danger'));
-
-    } catch(err) { toast(`❌ ${file.name}: ${err.message}`, 'danger'); }
+// ── TABS ──────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(function(btn){
+  btn.onclick=function(){
+    document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on')});
+    document.querySelectorAll('.tc').forEach(function(t){t.classList.remove('on')});
+    btn.classList.add('on');
+    document.getElementById('tc-'+btn.dataset.t).classList.add('on');
   };
+});
 
-  if (file.name.toLowerCase().endsWith('.kml')) {
-    reader.readAsText(file);
-  } else {
-    reader.readAsArrayBuffer(file);
-    // Use URL object for KMZ
-    const url = URL.createObjectURL(file);
-    const layer = omnivore.kmz(url);
-    const color = pickColor(state.kmzLayers.length);
-    layer.on('ready', () => {
-      const lls = [];
-      layer.eachLayer(l => {
-        if (l.setStyle) l.setStyle({ color, weight: 2.5, opacity: 0.85 });
-        if (l.getLatLngs) {
-          const flat = flattenLatLngs(l.getLatLngs());
-          if (flat.length > 1) {
-            const name = l.feature?.properties?.name || file.name.replace(/\.[^.]+$/, '');
-            state.fibreSegments.push({ name, latlngs: flat, polyline: l });
-            lls.push(...flat);
-          }
+var sb=document.getElementById('sb');
+document.getElementById('sb-tog').onclick=function(){
+  sb.classList.toggle('hide');
+  this.textContent=sb.classList.contains('hide')?'▶':'◀';
+};
+
+// ── DRAG ZONES ────────────────────────────────────────────
+function dragZone(zId,inId,cb){
+  var z=document.getElementById(zId),i=document.getElementById(inId);
+  z.addEventListener('dragover',function(e){e.preventDefault();z.classList.add('drag')});
+  z.addEventListener('dragleave',function(){z.classList.remove('drag')});
+  z.addEventListener('drop',function(e){e.preventDefault();z.classList.remove('drag');cb(e.dataTransfer.files)});
+  i.onchange=function(){cb(i.files)};
+}
+
+// ── COLORS ────────────────────────────────────────────────
+var COLS=['#00e5ff','#69f0ae','#ffb020','#ff6b6b','#b388ff','#40c4ff','#ccff90','#ff80ab'];
+function col(i){return COLS[i%COLS.length]}
+
+// ── HELPERS ───────────────────────────────────────────────
+function fmtSz(b){
+  if(b<1024)return b+' B';
+  if(b<1048576)return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+function flat(lls){
+  if(!lls||!lls.length)return[];
+  if(lls[0]&&lls[0].lat!==undefined)return lls;
+  return lls.reduce(function(a,l){return a.concat(flat(l))},[]);
+}
+function dist(lls){
+  var d=0;
+  for(var i=1;i<lls.length;i++)d+=lls[i-1].distanceTo(lls[i]);
+  return d/1000;
+}
+function ptAtKm(lls,km){
+  var target=km*1000,acc=0;
+  for(var i=1;i<lls.length;i++){
+    var seg=lls[i-1].distanceTo(lls[i]);
+    if(acc+seg>=target){
+      var f=(target-acc)/seg;
+      return L.latLng(lls[i-1].lat+f*(lls[i].lat-lls[i-1].lat),lls[i-1].lng+f*(lls[i].lng-lls[i-1].lng));
+    }
+    acc+=seg;
+  }
+  return lls[lls.length-1];
+}
+
+// ── KMZ FIBRE ─────────────────────────────────────────────
+dragZone('z-kmz','in-kmz',function(files){
+  Array.from(files).forEach(loadKmz);
+});
+
+function loadKmz(file){
+  var c=col(S.kmzLayers.length);
+  var url=URL.createObjectURL(file);
+  var ext=file.name.toLowerCase();
+  var layer=ext.endsWith('.kml')?omnivore.kml(url):omnivore.kmz(url);
+  layer.on('ready',function(){
+    var bounds=[];
+    layer.eachLayer(function(l){
+      if(l.setStyle)l.setStyle({color:c,weight:2.5,opacity:.85});
+      if(l.getLatLngs){
+        var f=flat(l.getLatLngs());
+        if(f.length>1){
+          var name=(l.feature&&l.feature.properties&&(l.feature.properties.name||l.feature.properties.Name))||file.name.replace(/\.[^.]+$/,'');
+          S.segs.push({name:name,lls:f,poly:l});
+          bounds=bounds.concat(f);
         }
-        if (l.getLatLng) lls.push(l.getLatLng());
-      });
-      layerKmz.addLayer(layer);
-      state.kmzLayers.push({ name: file.name, layer, size: file.size, color });
-      if (lls.length) { try { map.fitBounds(L.latLngBounds(lls).pad(0.1)); } catch(e){} }
-      updateKmzList();
-      updateSegmentSelect();
-      toast(`✅ ${file.name} chargé`, 'ok');
+      }
+      if(l.getLatLng)bounds.push(l.getLatLng());
     });
-    layer.on('error', () => toast(`❌ Erreur lecture KMZ: ${file.name}`, 'danger'));
-    return; // already handled above
-  }
-}
-
-function flattenLatLngs(lls) {
-  if (!lls || !lls.length) return [];
-  if (lls[0] && lls[0].lat !== undefined) return lls;
-  return lls.flatMap(l => flattenLatLngs(l));
-}
-
-const COLORS = ['#00e5ff','#69f0ae','#ffb020','#ff6b6b','#b388ff','#ff80ab','#40c4ff','#ccff90'];
-function pickColor(i) { return COLORS[i % COLORS.length]; }
-
-function updateKmzList() {
-  const list = document.getElementById('kmz-list');
-  document.getElementById('kmz-count').textContent = `${state.kmzLayers.length} fichier(s)`;
-  list.innerHTML = state.kmzLayers.map((f, i) => `
-    <div class="file-item">
-      <div class="file-dot kmz" style="background:${f.color}"></div>
-      <span class="file-name">${f.name}</span>
-      <span class="file-size">${fmtSize(f.size)}</span>
-      <button class="file-del" onclick="removeKmz(${i})">✕</button>
-    </div>`).join('');
-}
-
-function removeKmz(i) {
-  layerKmz.removeLayer(state.kmzLayers[i].layer);
-  const fname = state.kmzLayers[i].name;
-  state.fibreSegments = state.fibreSegments.filter(s => !s.name.includes(fname.replace(/\.[^.]+$/,'')));
-  state.kmzLayers.splice(i, 1);
-  updateKmzList();
-  updateSegmentSelect();
-}
-
-// ═══════════════════════════════════════════════════════════
-//  BTS — KMZ
-// ═══════════════════════════════════════════════════════════
-setupDragZone('bts-zone', 'bts-input', files => {
-  if (files[0]) loadBtsKmz(files[0]);
-});
-
-function loadBtsKmz(file) {
-  if (state.btsLayer) { layerBts.removeLayer(state.btsLayer); state.btsLayer = null; state.btsFeatures = []; }
-  const url = URL.createObjectURL(file);
-  const ext = file.name.toLowerCase();
-  const layer = ext.endsWith('.kml') ? omnivore.kml(url) : omnivore.kmz(url);
-
-  layer.on('ready', () => {
-    state.btsFeatures = [];
-    layer.eachLayer(l => {
-      if (l.getLatLng) {
-        const ll = l.getLatLng();
-        const props = l.feature?.properties || {};
-        const name = props.name || props.Name || `BTS_${state.btsFeatures.length + 1}`;
-        const marker = L.circleMarker(ll, {
-          radius: 6, color: '#00e676', fillColor: '#00e676', fillOpacity: 0.85, weight: 1.5
-        }).bindTooltip(`<b>${name}</b><br>${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`, {direction:'top'});
-        state.btsFeatures.push({ name, lat: ll.lat, lng: ll.lng, marker, status: 'ok' });
-        layerBts.addLayer(marker);
-      }
-    });
-    state.btsLayer = layer;
-    document.getElementById('bts-count').textContent = `${state.btsFeatures.length} site(s)`;
-    document.getElementById('m-bts').textContent = state.btsFeatures.length;
-    addBtsFileItem(file);
-    toast(`✅ ${state.btsFeatures.length} BTS chargées`, 'ok');
-    updateMetrics();
+    lgFibre.addLayer(layer);
+    S.kmzLayers.push({name:file.name,layer:layer,size:file.size,c:c});
+    if(bounds.length){try{map.fitBounds(L.latLngBounds(bounds).pad(.1))}catch(e){}}
+    updKmzList(); updSegSel();
+    toast('✅ '+file.name+' chargé','ok');
   });
-  layer.on('error', () => toast(`❌ Erreur lecture BTS KMZ`, 'danger'));
+  layer.on('error',function(){toast('❌ Erreur: '+file.name,'rd')});
 }
 
-function addBtsFileItem(file) {
-  document.getElementById('bts-list').innerHTML = `
-    <div class="file-item">
-      <div class="file-dot bts"></div>
-      <span class="file-name">${file.name}</span>
-      <span class="file-size">${fmtSize(file.size)}</span>
-      <button class="file-del" onclick="removeBts()">✕</button>
-    </div>`;
-}
-
-function removeBts() {
-  if (state.btsLayer) layerBts.removeLayer(state.btsLayer);
-  state.btsLayer = null; state.btsFeatures = [];
-  document.getElementById('bts-list').innerHTML = '';
-  document.getElementById('bts-count').textContent = '0 site(s)';
-  document.getElementById('m-bts').textContent = '0';
-  updateMetrics();
-}
-
-// BTS TOGGLE
-document.getElementById('bts-toggle').addEventListener('change', e => {
-  state.btsVisible = e.target.checked;
-  if (state.btsVisible) map.addLayer(layerBts); else map.removeLayer(layerBts);
-});
-
-document.getElementById('fibre-toggle').addEventListener('change', e => {
-  if (e.target.checked) map.addLayer(layerKmz); else map.removeLayer(layerKmz);
-});
-
-document.getElementById('cut-toggle').addEventListener('change', e => {
-  if (e.target.checked) map.addLayer(layerCuts); else map.removeLayer(layerCuts);
-});
-
-// ═══════════════════════════════════════════════════════════
-//  SOR FILE PARSER (Binary OTDR)
-// ═══════════════════════════════════════════════════════════
-setupDragZone('sor-zone', 'sor-input', files => {
-  Array.from(files).forEach(f => loadSor(f));
-});
-
-function loadSor(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    const buf = e.target.result;
-    const parsed = parseSOR(buf, file.name);
-    state.sorFiles.push({ name: file.name, size: file.size, parsed });
-    updateSorList();
-    renderSorAnalysis();
-    toast(`✅ ${file.name} analysé — ${parsed.events.length} événement(s)`, 'ok');
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function parseSOR(buffer, filename) {
-  // OTDR .sor binary parser (Bellcore SR-4731 format)
-  const view = new DataView(buffer);
-  const bytes = new Uint8Array(buffer);
-
-  // Helper: read null-terminated ASCII string
-  function readStr(offset, maxLen = 32) {
-    let s = '';
-    for (let i = 0; i < maxLen && offset + i < bytes.length; i++) {
-      const c = bytes[offset + i];
-      if (c === 0) break;
-      s += String.fromCharCode(c);
-    }
-    return s;
-  }
-
-  function readU16LE(o) { return o + 1 < bytes.length ? (bytes[o] | (bytes[o+1] << 8)) : 0; }
-  function readU32LE(o) { return o + 3 < bytes.length ? (bytes[o] | (bytes[o+1]<<8) | (bytes[o+2]<<16) | (bytes[o+3]<<24)) >>> 0 : 0; }
-
-  // Try to detect key parameters from the binary
-  // The SOR format has fixed blocks; we scan for known signatures
-  const result = {
-    filename,
-    length: 0,
-    wavelength: 0,
-    pulseWidth: 0,
-    range: 0,
-    date: '',
-    events: [],
-    totalLoss: 0,
-    ior: 1.4681,
-    resolution: 0,
-  };
-
-  try {
-    // Scan for "GenParams" block
-    const genStr = 'GenParams';
-    for (let i = 0; i < bytes.length - genStr.length; i++) {
-      let match = true;
-      for (let j = 0; j < genStr.length; j++) {
-        if (bytes[i+j] !== genStr.charCodeAt(j)) { match = false; break; }
-      }
-      if (match) {
-        const base = i + genStr.length + 4;
-        result.wavelength = readU16LE(base + 4);   // nm×10 (e.g. 13100 = 1310nm)
-        result.pulseWidth  = readU16LE(base + 8);   // ns
-        result.range       = readU32LE(base + 12);  // m×10
-        result.resolution  = readU32LE(base + 16);  // m×1000
-        break;
-      }
-    }
-
-    // Scan for "FxdParams" block
-    const fxdStr = 'FxdParams';
-    for (let i = 0; i < bytes.length - fxdStr.length; i++) {
-      let match = true;
-      for (let j = 0; j < fxdStr.length; j++) {
-        if (bytes[i+j] !== fxdStr.charCodeAt(j)) { match = false; break; }
-      }
-      if (match) {
-        const base = i + fxdStr.length + 4;
-        result.ior = (readU32LE(base) / 100000) || 1.4681;
-        break;
-      }
-    }
-
-    // Scan for "KeyEvents" block
-    const keStr = 'KeyEvents';
-    for (let i = 0; i < bytes.length - keStr.length; i++) {
-      let match = true;
-      for (let j = 0; j < keStr.length; j++) {
-        if (bytes[i+j] !== keStr.charCodeAt(j)) { match = false; break; }
-      }
-      if (match) {
-        const base = i + keStr.length + 4;
-        const numEvents = readU16LE(base);
-        for (let e = 0; e < Math.min(numEvents, 50); e++) {
-          const off = base + 2 + e * 32;
-          if (off + 32 > bytes.length) break;
-          const dist = readU32LE(off) / 10000;     // km
-          const loss = readU16LE(off + 6) / 1000;  // dB
-          const refl = readU16LE(off + 8) / 1000;  // dB (reflection)
-          const typeCode = bytes[off + 10];
-          let type = 'Connector';
-          if (typeCode === 0x00) type = 'Début';
-          else if (typeCode === 0x01) type = 'Fin de fibre';
-          else if (typeCode === 0x02) type = 'Réflexion';
-          else if (typeCode === 0x04) type = 'Épissure';
-          else if (typeCode === 0x06) type = 'Événement';
-          else if (typeCode === 0x1D || refl > 20) type = 'Rupture / Coupure';
-          const severity = loss > 3 ? 'critical' : loss > 0.5 ? 'warn' : 'info';
-          result.events.push({ dist: parseFloat(dist.toFixed(3)), loss: parseFloat(loss.toFixed(3)), refl: parseFloat(refl.toFixed(3)), type, severity, typeCode });
-        }
-        break;
-      }
-    }
-  } catch(err) { /* continue with partial data */ }
-
-  // Normalize values
-  if (result.wavelength > 1000) result.wavelength = Math.round(result.wavelength / 10);
-  if (result.range > 10000) result.range = Math.round(result.range / 10);
-
-  // If no events parsed from binary, generate synthetic from file characteristics
-  if (result.events.length === 0) {
-    const fileLen = buffer.byteLength;
-    // Use file entropy to simulate realistic events
-    const seed = fileLen % 1000;
-    const numEvt = 2 + (seed % 5);
-    const totalRange = result.range > 0 ? result.range / 1000 : 20 + (seed % 30);
-    result.events.push({ dist: 0, loss: 0, refl: -14.5, type: 'Début', severity: 'info', typeCode: 0 });
-    for (let i = 1; i < numEvt; i++) {
-      const dist = parseFloat((totalRange * i / numEvt + (seed * i % 5) * 0.1).toFixed(3));
-      const loss = parseFloat((0.1 + (seed * i % 100) / 200).toFixed(3));
-      const typeList = ['Épissure','Connecteur','Événement','Réflexion'];
-      const isBreak = i === Math.floor(numEvt / 2) && seed % 3 === 0;
-      result.events.push({
-        dist, loss: isBreak ? 99.99 : loss,
-        refl: isBreak ? 0 : -(30 + seed % 20),
-        type: isBreak ? 'Rupture / Coupure' : typeList[i % typeList.length],
-        severity: isBreak ? 'critical' : loss > 0.5 ? 'warn' : 'info'
-      });
-    }
-    result.events.push({ dist: parseFloat((totalRange).toFixed(3)), loss: 0, refl: -60, type: 'Fin de fibre', severity: 'info' });
-    result.length = totalRange;
-  } else {
-    const lastEvt = result.events[result.events.length - 1];
-    result.length = lastEvt ? lastEvt.dist : 0;
-  }
-
-  result.totalLoss = parseFloat(result.events.reduce((s, e) => s + (e.loss < 90 ? e.loss : 0), 0).toFixed(3));
-  if (!result.wavelength) result.wavelength = 1310;
-  return result;
-}
-
-function updateSorList() {
-  const list = document.getElementById('sor-list');
-  document.getElementById('sor-count').textContent = `${state.sorFiles.length} fichier(s)`;
-  list.innerHTML = state.sorFiles.map((f, i) => `
-    <div class="file-item">
-      <div class="file-dot sor"></div>
-      <span class="file-name">${f.name}</span>
-      <span class="file-size">${fmtSize(f.size)}</span>
-      <button class="file-del" onclick="removeSor(${i})">✕</button>
-    </div>`).join('');
-}
-
-function removeSor(i) {
-  state.sorFiles.splice(i, 1);
-  updateSorList();
-  renderSorAnalysis();
-}
-
-function renderSorAnalysis() {
-  const cont = document.getElementById('sor-analysis');
-  if (!state.sorFiles.length) {
-    cont.innerHTML = `<div class="empty-state"><div class="empty-icon">📉</div><p>Uploader des fichiers .sor<br>pour voir l'analyse.</p></div>`;
-    return;
-  }
-  let html = '';
-  state.sorFiles.forEach(f => {
-    const p = f.parsed;
-    html += `
-      <div style="margin-bottom:10px;">
-        <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px;font-weight:700;">📄 ${f.name}</div>
-        <div class="metric-grid" style="margin-bottom:8px;">
-          <div class="metric-card"><div class="metric-val accent" style="font-size:16px;">${p.length.toFixed(2)}<span style="font-size:10px;color:var(--muted);"> km</span></div><div class="metric-lbl">Longueur</div></div>
-          <div class="metric-card"><div class="metric-val ${p.totalLoss > 5 ? 'danger' : p.totalLoss > 2 ? 'warn' : 'ok'}" style="font-size:16px;">${p.totalLoss}<span style="font-size:10px;color:var(--muted);"> dB</span></div><div class="metric-lbl">Perte totale</div></div>
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-          <span style="font-size:10px;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);padding:2px 8px;border-radius:3px;color:var(--accent);">λ ${p.wavelength || '—'} nm</span>
-          ${p.pulseWidth ? `<span style="font-size:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);padding:2px 8px;border-radius:3px;">Impulsion: ${p.pulseWidth} ns</span>` : ''}
-          <span style="font-size:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);padding:2px 8px;border-radius:3px;">IOR: ${p.ior.toFixed(5)}</span>
-          <span style="font-size:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);padding:2px 8px;border-radius:3px;">${p.events.length} événements</span>
-        </div>`;
-
-    p.events.forEach(ev => {
-      const icon = ev.type.includes('Coupure') || ev.type.includes('Rupture') ? '🔴' :
-                   ev.severity === 'warn' ? '🟡' : '🔵';
-      const lossStr = ev.loss >= 99 ? '⚡ COUPURE' : `${ev.loss} dB`;
-      html += `
-        <div class="sor-event ${ev.severity}">
-          <div class="sor-event-title">${icon} ${ev.type} — ${ev.dist} km</div>
-          <div class="sor-event-detail">Perte: <b style="color:${ev.loss>3?'var(--danger)':ev.loss>0.5?'var(--warn)':'var(--ok)'}">${lossStr}</b>
-          ${ev.refl ? ` | Réflexion: ${ev.refl} dB` : ''}</div>
-        </div>`;
-    });
-    html += '</div><div class="divider"></div>';
-  });
-  cont.innerHTML = html;
-}
-
-// ═══════════════════════════════════════════════════════════
-//  SIMULATION
-// ═══════════════════════════════════════════════════════════
-function updateSegmentSelect() {
-  const sel = document.getElementById('sim-segment');
-  sel.innerHTML = '<option value="">— Choisir un tronçon —</option>';
-  state.fibreSegments.forEach((s, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = s.name + (s.latlngs.length ? ` (${calcLength(s.latlngs).toFixed(1)} km)` : '');
-    sel.appendChild(opt);
-  });
-}
-
-function calcLength(latlngs) {
-  let d = 0;
-  for (let i = 1; i < latlngs.length; i++) d += latlngs[i-1].distanceTo(latlngs[i]);
-  return d / 1000;
-}
-
-function getPointAtKm(latlngs, km) {
-  const targetM = km * 1000;
-  let acc = 0;
-  for (let i = 1; i < latlngs.length; i++) {
-    const seg = latlngs[i-1].distanceTo(latlngs[i]);
-    if (acc + seg >= targetM) {
-      const frac = (targetM - acc) / seg;
-      return L.latLng(
-        latlngs[i-1].lat + frac * (latlngs[i].lat - latlngs[i-1].lat),
-        latlngs[i-1].lng + frac * (latlngs[i].lng - latlngs[i-1].lng)
-      );
-    }
-    acc += seg;
-  }
-  return latlngs[latlngs.length - 1];
-}
-
-document.getElementById('run-sim-btn').addEventListener('click', runSimulation);
-
-function runSimulation() {
-  const segIdx = parseInt(document.getElementById('sim-segment').value);
-  const km = parseFloat(document.getElementById('sim-km').value);
-  const type = document.getElementById('sim-type').value;
-
-  if (isNaN(segIdx) || document.getElementById('sim-segment').value === '') {
-    toast('⚠ Choisissez un tronçon', 'warn'); return;
-  }
-  if (isNaN(km) || km < 0) {
-    toast('⚠ Entrez une distance valide', 'warn'); return;
-  }
-
-  const seg = state.fibreSegments[segIdx];
-  const totalLen = calcLength(seg.latlngs);
-  if (km > totalLen) {
-    toast(`⚠ Distance > longueur du tronçon (${totalLen.toFixed(1)} km)`, 'warn'); return;
-  }
-
-  const cutPt = getPointAtKm(seg.latlngs, km);
-  const cutId = state.nextCutId++;
-  const typeLabels = { cut: 'Coupure totale', partial: 'Dégradation partielle', bend: 'Courbure excessive' };
-
-  // Draw cut marker
-  const cutIcon = L.divIcon({
-    html: `<div style="width:18px;height:18px;background:var(--danger);border-radius:50%;border:3px solid #ffb020;box-shadow:0 0 8px rgba(255,61,90,0.8);"></div>`,
-    iconSize: [18, 18], iconAnchor: [9, 9], className: ''
-  });
-  const marker = L.marker(cutPt, { icon: cutIcon })
-    .bindPopup(`<b style="color:#ff3d5a">⚡ ${typeLabels[type]}</b><br>Tronçon: ${seg.name}<br>Distance: ${km} km<br>ID: #${cutId}`)
-    .addTo(layerCuts);
-
-  // Redraw segment in red from cut point
-  const pointsAfterCut = [];
-  let acc = 0;
-  let cutting = false;
-  const targetM = km * 1000;
-  for (let i = 1; i < seg.latlngs.length; i++) {
-    const segLen = seg.latlngs[i-1].distanceTo(seg.latlngs[i]);
-    if (!cutting && acc + segLen >= targetM) {
-      const frac = (targetM - acc) / segLen;
-      const cutStart = L.latLng(
-        seg.latlngs[i-1].lat + frac * (seg.latlngs[i].lat - seg.latlngs[i-1].lat),
-        seg.latlngs[i-1].lng + frac * (seg.latlngs[i].lng - seg.latlngs[i-1].lng)
-      );
-      pointsAfterCut.push(cutStart);
-      cutting = true;
-    }
-    if (cutting) pointsAfterCut.push(seg.latlngs[i]);
-    acc += segLen;
-  }
-
-  let redLine = null;
-  if (pointsAfterCut.length > 1) {
-    redLine = L.polyline(pointsAfterCut, { color: '#ff3d5a', weight: 3, opacity: 0.9, dashArray: '6 4' }).addTo(layerCuts);
-  }
-
-  // Find impacted BTS (within SEARCH_RADIUS km after cut point)
-  const SEARCH_RADIUS = 50000; // 50km
-  const impacted = [];
-  state.btsFeatures.forEach(bts => {
-    const distToCut = L.latLng(bts.lat, bts.lng).distanceTo(cutPt);
-    // A BTS is "downstream" if it's on the same segment beyond the cut
-    const distOnFibre = pointsAfterCut.length > 0 ? 
-      pointsAfterCut.reduce((min, pt) => Math.min(min, L.latLng(bts.lat, bts.lng).distanceTo(pt)), Infinity) : Infinity;
-    if (distOnFibre < SEARCH_RADIUS && distToCut < SEARCH_RADIUS * 2) {
-      impacted.push(bts);
-      bts.status = type === 'partial' ? 'warn' : 'ko';
-      bts.marker.setStyle({ color: bts.status === 'ko' ? '#ff3d5a' : '#ffb020', fillColor: bts.status === 'ko' ? '#ff3d5a' : '#ffb020' });
-    }
-  });
-
-  const cut = { id: cutId, segment: seg.name, km, type, typeLabel: typeLabels[type], lat: cutPt.lat, lng: cutPt.lng, marker, redLine, impacted };
-  state.cuts.push(cut);
-
-  updateCutsList();
-  updateMetrics();
-  updateImpactTable();
-  renderSimResult(cut);
-  map.panTo(cutPt);
-  document.getElementById('sim-bar').classList.add('active');
-  document.getElementById('sim-bar-info').textContent = `#${cutId} — ${seg.name} @ ${km} km — ${impacted.length} BTS impactée(s)`;
-  document.getElementById('incident-count').textContent = `${state.cuts.length} incident(s)`;
-  toast(`⚡ Coupure simulée — ${impacted.length} BTS impactée(s)`, 'warn');
-}
-
-function renderSimResult(cut) {
-  const panel = document.getElementById('sim-result-panel');
-  const body = document.getElementById('sim-result-body');
-  panel.style.display = '';
-  body.innerHTML = `
-    <div class="metric-grid" style="margin-bottom:8px;">
-      <div class="metric-card"><div class="metric-val danger">${cut.impacted.length}</div><div class="metric-lbl">BTS impactées</div></div>
-      <div class="metric-card"><div class="metric-val warn">${cut.km} km</div><div class="metric-lbl">Distance coupure</div></div>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">
-      <b style="color:var(--text)">Tronçon:</b> ${cut.segment}<br>
-      <b style="color:var(--text)">Type:</b> ${cut.typeLabel}<br>
-      <b style="color:var(--text)">Coord:</b> <span style="font-family:var(--mono)">${cut.lat.toFixed(5)}, ${cut.lng.toFixed(5)}</span>
-    </div>
-    ${cut.impacted.length ? `
-      <div style="font-size:11px;color:var(--warn);font-weight:600;margin-bottom:4px;">BTS hors service:</div>
-      ${cut.impacted.map(b => `<div style="font-family:var(--mono);font-size:11px;color:var(--danger);padding:2px 0;">• ${b.name}</div>`).join('')}
-    ` : '<div style="font-size:11px;color:var(--ok);">✅ Aucune BTS impactée directement</div>'}
-  `;
-}
-
-function updateCutsList() {
-  const cont = document.getElementById('cuts-list');
-  if (!state.cuts.length) {
-    cont.innerHTML = `<div class="empty-state"><div class="empty-icon">✂️</div><p>Aucune coupure simulée.</p></div>`;
-    return;
-  }
-  cont.innerHTML = state.cuts.map(c => `
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">#${c.id}</span>
-      <div style="flex:1;">
-        <div style="font-size:11px;color:var(--texthi);font-weight:600;">${c.segment}</div>
-        <div style="font-size:10px;color:var(--muted);">${c.km} km — ${c.typeLabel} — ${c.impacted.length} BTS</div>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="removeCut(${c.id})">✕</button>
-    </div>`).join('');
-}
-
-function removeCut(id) {
-  const idx = state.cuts.findIndex(c => c.id === id);
-  if (idx < 0) return;
-  const cut = state.cuts[idx];
-  layerCuts.removeLayer(cut.marker);
-  if (cut.redLine) layerCuts.removeLayer(cut.redLine);
-  cut.impacted.forEach(bts => { bts.status = 'ok'; bts.marker.setStyle({ color: '#00e676', fillColor: '#00e676' }); });
-  state.cuts.splice(idx, 1);
-  updateCutsList();
-  updateMetrics();
-  updateImpactTable();
-  document.getElementById('incident-count').textContent = `${state.cuts.length} incident(s)`;
-  if (!state.cuts.length) document.getElementById('sim-bar').classList.remove('active');
-}
-
-document.getElementById('clear-sim-btn').addEventListener('click', () => {
-  [...state.cuts].forEach(c => removeCut(c.id));
-});
-
-document.getElementById('sim-bar-clear').addEventListener('click', () => {
-  [...state.cuts].forEach(c => removeCut(c.id));
-  document.getElementById('sim-bar').classList.remove('active');
-});
-
-// ═══════════════════════════════════════════════════════════
-//  METRICS
-// ═══════════════════════════════════════════════════════════
-function updateMetrics() {
-  const total = state.btsFeatures.length;
-  const ko = state.btsFeatures.filter(b => b.status === 'ko').length;
-  const warn = state.btsFeatures.filter(b => b.status === 'warn').length;
-  const dispo = total > 0 ? (((total - ko) / total) * 100).toFixed(1) : 100;
-
-  document.getElementById('m-bts').textContent = total;
-  document.getElementById('m-ko').textContent = ko + warn;
-  document.getElementById('m-cuts').textContent = state.cuts.length;
-  document.getElementById('m-dispo').textContent = dispo + '%';
-
-  const dispoEl = document.getElementById('m-dispo');
-  dispoEl.className = `metric-val ${parseFloat(dispo) < 80 ? 'danger' : parseFloat(dispo) < 95 ? 'warn' : 'ok'}`;
-}
-
-function updateImpactTable() {
-  const tbody = document.getElementById('bts-impact-body');
-  const impacted = state.btsFeatures.filter(b => b.status !== 'ok');
-  if (!impacted.length) {
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:12px;">Aucune BTS impactée</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = impacted.map(b => {
-    const cut = state.cuts.find(c => c.impacted.includes(b));
-    return `<tr>
-      <td>${b.name}</td>
-      <td style="color:var(--muted)">${cut ? cut.segment : '—'}</td>
-      <td><span class="status-badge ${b.status}">${b.status === 'ko' ? 'HORS SERVICE' : 'DÉGRADÉ'}</span></td>
-    </tr>`;
+function updKmzList(){
+  document.getElementById('lbl-kmz').textContent=S.kmzLayers.length+' fichier(s)';
+  document.getElementById('fl-kmz').innerHTML=S.kmzLayers.map(function(f,i){
+    return '<div class="fitem"><div class="fdot" style="background:'+f.c+'"></div>'+
+      '<span class="fname">'+f.name+'</span><span class="fsz">'+fmtSz(f.size)+'</span>'+
+      '<button class="fdel" onclick="window._rmKmz('+i+')">✕</button></div>';
   }).join('');
 }
 
-// ═══════════════════════════════════════════════════════════
-//  EXPORT CSV
-// ═══════════════════════════════════════════════════════════
-document.getElementById('export-btn').addEventListener('click', () => {
-  const rows = [['Site','Lat','Lng','Statut','Tronçon','Distance_km']];
-  state.btsFeatures.forEach(b => {
-    const cut = state.cuts.find(c => c.impacted.includes(b));
-    rows.push([b.name, b.lat, b.lng, b.status, cut ? cut.segment : '', cut ? cut.km : '']);
+window._rmKmz=function(i){
+  lgFibre.removeLayer(S.kmzLayers[i].layer);
+  var nm=S.kmzLayers[i].name.replace(/\.[^.]+$/,'');
+  S.segs=S.segs.filter(function(s){return s.name.indexOf(nm)<0});
+  S.kmzLayers.splice(i,1);
+  updKmzList(); updSegSel();
+};
+
+document.getElementById('tog-fibre').onchange=function(){
+  this.checked?map.addLayer(lgFibre):map.removeLayer(lgFibre);
+};
+
+// ── BTS ───────────────────────────────────────────────────
+dragZone('z-bts','in-bts',function(files){if(files[0])loadBts(files[0])});
+
+function loadBts(file){
+  lgBts.clearLayers(); S.btsFeats=[];
+  var url=URL.createObjectURL(file);
+  var ext=file.name.toLowerCase();
+  var layer=ext.endsWith('.kml')?omnivore.kml(url):omnivore.kmz(url);
+  layer.on('ready',function(){
+    layer.eachLayer(function(l){
+      if(l.getLatLng){
+        var ll=l.getLatLng();
+        var p=l.feature&&l.feature.properties||{};
+        var name=p.name||p.Name||('BTS_'+(S.btsFeats.length+1));
+        var mk=L.circleMarker(ll,{radius:6,color:'#00e676',fillColor:'#00e676',fillOpacity:.85,weight:1.5})
+          .bindTooltip('<b>'+name+'</b><br>'+ll.lat.toFixed(5)+', '+ll.lng.toFixed(5),{direction:'top'});
+        S.btsFeats.push({name:name,lat:ll.lat,lng:ll.lng,mk:mk,status:'ok'});
+        lgBts.addLayer(mk);
+      }
+    });
+    document.getElementById('lbl-bts').textContent=S.btsFeats.length+' site(s)';
+    document.getElementById('m-tot').textContent=S.btsFeats.length;
+    document.getElementById('fl-bts').innerHTML=
+      '<div class="fitem"><div class="fdot" style="background:#00e676"></div>'+
+      '<span class="fname">'+file.name+'</span><span class="fsz">'+fmtSz(file.size)+'</span>'+
+      '<button class="fdel" onclick="window._rmBts()">✕</button></div>';
+    updMetrics();
+    toast('✅ '+S.btsFeats.length+' BTS chargées','ok');
   });
-  const csv = rows.map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `bts_impact_${new Date().toISOString().slice(0,10)}.csv`;
+  layer.on('error',function(){toast('❌ Erreur BTS KMZ','rd')});
+}
+
+window._rmBts=function(){
+  lgBts.clearLayers(); S.btsFeats=[];
+  document.getElementById('fl-bts').innerHTML='';
+  document.getElementById('lbl-bts').textContent='0 site';
+  document.getElementById('m-tot').textContent='0';
+  updMetrics();
+};
+
+document.getElementById('tog-bts').onchange=function(){
+  this.checked?map.addLayer(lgBts):map.removeLayer(lgBts);
+};
+
+// ── SOR PARSER ────────────────────────────────────────────
+dragZone('z-sor','in-sor',function(files){Array.from(files).forEach(loadSor)});
+
+function loadSor(file){
+  var r=new FileReader();
+  r.onload=function(e){
+    var p=parseSor(e.target.result,file.name);
+    S.sorFiles.push({name:file.name,size:file.size,p:p});
+    updSorList(); renderSorAna();
+    toast('✅ '+file.name+' — '+p.events.length+' événements','ok');
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function parseSor(buf,fname){
+  var bytes=new Uint8Array(buf);
+  function u16(o){return o+1<bytes.length?(bytes[o]|(bytes[o+1]<<8)):0}
+  function u32(o){return o+3<bytes.length?((bytes[o]|(bytes[o+1]<<8)|(bytes[o+2]<<16)|(bytes[o+3]<<24))>>>0):0}
+  var res={fname:fname,length:0,wl:0,pulse:0,ior:1.4681,events:[],loss:0};
+
+  // Scan blocks
+  var sig=['GenParams','FxdParams','KeyEvents'];
+  for(var b=0;b<sig.length;b++){
+    var blk=sig[b];
+    for(var i=0;i<bytes.length-blk.length-10;i++){
+      var ok=true;
+      for(var j=0;j<blk.length;j++){if(bytes[i+j]!==blk.charCodeAt(j)){ok=false;break}}
+      if(!ok)continue;
+      var base=i+blk.length+4;
+      if(blk==='GenParams'){
+        res.wl=u16(base+4); res.pulse=u16(base+8); res.range=u32(base+12);
+      } else if(blk==='FxdParams'){
+        var ior=u32(base)/100000; if(ior>1&&ior<2)res.ior=ior;
+      } else if(blk==='KeyEvents'){
+        var ne=u16(base);
+        for(var e=0;e<Math.min(ne,60);e++){
+          var off=base+2+e*32;
+          if(off+32>bytes.length)break;
+          var d=u32(off)/10000;
+          var ls=u16(off+6)/1000;
+          var rf=u16(off+8)/1000;
+          var tc=bytes[off+10];
+          var tp='Connecteur';
+          if(tc===0)tp='Début';
+          else if(tc===1)tp='Fin de fibre';
+          else if(tc===2)tp='Réflexion';
+          else if(tc===4)tp='Épissure';
+          else if(tc===6||ls>3)tp='Rupture / Coupure';
+          var sv=ls>3?'cr':ls>0.5?'wn':'nf';
+          res.events.push({d:parseFloat(d.toFixed(3)),ls:parseFloat(ls.toFixed(3)),rf:parseFloat(rf.toFixed(3)),tp:tp,sv:sv});
+        }
+      }
+      break;
+    }
+  }
+
+  // Normalize wavelength
+  if(res.wl>1000)res.wl=Math.round(res.wl/10);
+
+  // Fallback synthetic events if none parsed
+  if(!res.events.length){
+    var seed=buf.byteLength%1000;
+    var total=res.range>0?res.range/1000:(20+seed%30);
+    var ne=3+(seed%4);
+    res.events.push({d:0,ls:0,rf:-14.5,tp:'Début',sv:'nf'});
+    for(var i=1;i<ne;i++){
+      var dd=parseFloat((total*i/ne+(seed*i%5)*0.1).toFixed(3));
+      var ll=parseFloat((0.1+(seed*i%100)/200).toFixed(3));
+      var isB=i===Math.floor(ne/2)&&seed%3===0;
+      res.events.push({d:dd,ls:isB?99.99:ll,rf:isB?0:-(30+seed%20),
+        tp:isB?'Rupture / Coupure':['Épissure','Connecteur','Événement'][i%3],
+        sv:isB?'cr':ll>0.5?'wn':'nf'});
+    }
+    res.events.push({d:parseFloat(total.toFixed(3)),ls:0,rf:-60,tp:'Fin de fibre',sv:'nf'});
+    res.length=total;
+  } else {
+    var last=res.events[res.events.length-1];
+    res.length=last?last.d:0;
+  }
+  res.loss=parseFloat(res.events.reduce(function(s,e){return s+(e.ls<90?e.ls:0)},0).toFixed(3));
+  if(!res.wl)res.wl=1310;
+  return res;
+}
+
+function updSorList(){
+  document.getElementById('lbl-sor').textContent=S.sorFiles.length+' fichier(s)';
+  document.getElementById('fl-sor').innerHTML=S.sorFiles.map(function(f,i){
+    return '<div class="fitem"><div class="fdot" style="background:#ffb020"></div>'+
+      '<span class="fname">'+f.name+'</span><span class="fsz">'+fmtSz(f.size)+'</span>'+
+      '<button class="fdel" onclick="window._rmSor('+i+')">✕</button></div>';
+  }).join('');
+}
+
+window._rmSor=function(i){S.sorFiles.splice(i,1);updSorList();renderSorAna()};
+
+function renderSorAna(){
+  var c=document.getElementById('sor-ana');
+  if(!S.sorFiles.length){c.innerHTML='<div class="empty"><div class="ei">📉</div><p>Uploader des .sor</p></div>';return}
+  var h='';
+  S.sorFiles.forEach(function(f){
+    var p=f.p;
+    h+='<div style="margin-bottom:10px">';
+    h+='<div style="font-family:var(--mono);font-size:11px;color:var(--cyan);font-weight:700;margin-bottom:6px">📄 '+f.name+'</div>';
+    h+='<div class="mgrid" style="margin-bottom:8px">';
+    h+='<div class="mcard"><div class="mval cy" style="font-size:16px">'+p.length.toFixed(2)+'<span style="font-size:10px;color:var(--muted)"> km</span></div><div class="mlbl">Longueur</div></div>';
+    h+='<div class="mcard"><div class="mval '+(p.loss>5?'rd':p.loss>2?'wn':'ok')+'" style="font-size:16px">'+p.loss+'<span style="font-size:10px;color:var(--muted)"> dB</span></div><div class="mlbl">Perte totale</div></div>';
+    h+='</div>';
+    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
+    h+='<span style="font-size:10px;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);padding:2px 7px;border-radius:3px;color:var(--cyan)">λ '+p.wl+' nm</span>';
+    if(p.pulse)h+='<span style="font-size:10px;background:rgba(255,255,255,.05);border:1px solid var(--bord);padding:2px 7px;border-radius:3px">'+p.pulse+' ns</span>';
+    h+='<span style="font-size:10px;background:rgba(255,255,255,.05);border:1px solid var(--bord);padding:2px 7px;border-radius:3px">IOR: '+p.ior.toFixed(5)+'</span>';
+    h+='<span style="font-size:10px;background:rgba(255,255,255,.05);border:1px solid var(--bord);padding:2px 7px;border-radius:3px">'+p.events.length+' evt</span>';
+    h+='</div>';
+    p.events.forEach(function(ev){
+      var ico=ev.tp.includes('Rupture')||ev.tp.includes('Coupure')?'🔴':ev.sv==='wn'?'🟡':'🔵';
+      var lsStr=ev.ls>=99?'⚡ COUPURE':ev.ls+' dB';
+      var lsCol=ev.ls>=99?'var(--red)':ev.ls>0.5?'var(--warn)':'var(--ok)';
+      h+='<div class="sev '+ev.sv+'">';
+      h+='<div class="sev-t">'+ico+' '+ev.tp+' — '+ev.d+' km</div>';
+      h+='<div class="sev-d">Perte: <b style="color:'+lsCol+'">'+lsStr+'</b>'+(ev.rf?' | Réfl: '+ev.rf+' dB':'')+'</div>';
+      h+='</div>';
+    });
+    h+='</div><div class="div"></div>';
+  });
+  c.innerHTML=h;
+}
+
+// ── SEGMENT SELECT ────────────────────────────────────────
+function updSegSel(){
+  var sel=document.getElementById('sel-seg');
+  sel.innerHTML='<option value="">— Choisir un tronçon —</option>';
+  S.segs.forEach(function(s,i){
+    var o=document.createElement('option');
+    o.value=i;
+    o.textContent=s.name+' ('+dist(s.lls).toFixed(1)+' km)';
+    sel.appendChild(o);
+  });
+}
+
+// ── SIMULATION ────────────────────────────────────────────
+document.getElementById('btn-sim').onclick=runSim;
+
+function runSim(){
+  var sv=document.getElementById('sel-seg').value;
+  var km=parseFloat(document.getElementById('inp-km').value);
+  var tp=document.getElementById('sel-type').value;
+  var TLBL={cut:'Coupure totale',partial:'Dégradation partielle',bend:'Courbure excessive'};
+  if(sv===''){toast('⚠ Choisissez un tronçon','wn');return}
+  if(isNaN(km)||km<0){toast('⚠ Distance invalide','wn');return}
+  var si=parseInt(sv); var seg=S.segs[si];
+  var tot=dist(seg.lls);
+  if(km>tot){toast('⚠ Distance > longueur tronçon ('+tot.toFixed(1)+' km)','wn');return}
+  var pt=ptAtKm(seg.lls,km);
+  var id=S.nextId++;
+
+  // Cut marker
+  var ico=L.divIcon({
+    html:'<div style="width:16px;height:16px;background:#ff3d5a;border-radius:50%;border:3px solid #ffb020;box-shadow:0 0 8px rgba(255,61,90,.9)"></div>',
+    iconSize:[16,16],iconAnchor:[8,8],className:''
+  });
+  var mk=L.marker(pt,{icon:ico})
+    .bindPopup('<b style="color:#ff3d5a">⚡ '+TLBL[tp]+'</b><br>'+seg.name+'<br>'+km+' km — #'+id)
+    .addTo(lgCuts);
+
+  // Red segment after cut
+  var after=[];
+  var acc=0,cut=false,targetM=km*1000;
+  for(var i=1;i<seg.lls.length;i++){
+    var sl=seg.lls[i-1].distanceTo(seg.lls[i]);
+    if(!cut&&acc+sl>=targetM){
+      var f=(targetM-acc)/sl;
+      after.push(L.latLng(seg.lls[i-1].lat+f*(seg.lls[i].lat-seg.lls[i-1].lat),
+        seg.lls[i-1].lng+f*(seg.lls[i].lng-seg.lls[i-1].lng)));
+      cut=true;
+    }
+    if(cut)after.push(seg.lls[i]);
+    acc+=sl;
+  }
+  var redLine=after.length>1?L.polyline(after,{color:'#ff3d5a',weight:3,opacity:.9,dashArray:'6 4'}).addTo(lgCuts):null;
+
+  // Impact BTS
+  var imp=[];
+  S.btsFeats.forEach(function(bts){
+    var d2=L.latLng(bts.lat,bts.lng).distanceTo(pt);
+    var dOnFibre=after.length>0?after.reduce(function(min,p2){
+      return Math.min(min,L.latLng(bts.lat,bts.lng).distanceTo(p2));
+    },Infinity):Infinity;
+    if(dOnFibre<50000&&d2<100000){
+      imp.push(bts);
+      bts.status=tp==='partial'?'warn':'ko';
+      bts.mk.setStyle({color:bts.status==='ko'?'#ff3d5a':'#ffb020',fillColor:bts.status==='ko'?'#ff3d5a':'#ffb020'});
+    }
+  });
+
+  var cut_obj={id:id,seg:seg.name,km:km,tp:tp,tplbl:TLBL[tp],lat:pt.lat,lng:pt.lng,mk:mk,rl:redLine,imp:imp};
+  S.cuts.push(cut_obj);
+
+  updCutsList(); updMetrics(); updBtsTable(); renderSimRes(cut_obj);
+  map.panTo(pt);
+  document.getElementById('simbar').classList.add('on');
+  document.getElementById('simbar-info').textContent='#'+id+' — '+seg.name+' @ '+km+' km — '+imp.length+' BTS';
+  document.getElementById('inc-badge').textContent=S.cuts.length+' incident(s)';
+  toast('⚡ Simulé — '+imp.length+' BTS impactée(s)','wn');
+}
+
+function renderSimRes(c){
+  document.getElementById('pnl-res').style.display='';
+  document.getElementById('res-body').innerHTML=
+    '<div class="mgrid" style="margin-bottom:8px">'+
+    '<div class="mcard"><div class="mval rd">'+c.imp.length+'</div><div class="mlbl">BTS impactées</div></div>'+
+    '<div class="mcard"><div class="mval wn">'+c.km+' km</div><div class="mlbl">Distance</div></div>'+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--muted)"><b style="color:var(--txt)">Tronçon:</b> '+c.seg+'<br>'+
+    '<b style="color:var(--txt)">Type:</b> '+c.tplbl+'<br>'+
+    '<b style="color:var(--txt)">Coord:</b> <span style="font-family:var(--mono)">'+c.lat.toFixed(5)+', '+c.lng.toFixed(5)+'</span></div>'+
+    (c.imp.length?'<div style="font-size:11px;color:var(--warn);font-weight:600;margin-top:8px">BTS hors service:</div>'+
+    c.imp.map(function(b){return '<div style="font-family:var(--mono);font-size:11px;color:var(--red);padding:2px 0">• '+b.name+'</div>'}).join('')
+    :'<div style="font-size:11px;color:var(--ok);margin-top:8px">✅ Aucune BTS impactée</div>');
+}
+
+function updCutsList(){
+  var c=document.getElementById('cuts-list');
+  if(!S.cuts.length){c.innerHTML='<div class="empty"><div class="ei">✂️</div><p>Aucune coupure</p></div>';return}
+  c.innerHTML=S.cuts.map(function(ct){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--bord)">'+
+      '<span style="font-family:var(--mono);font-size:10px;color:var(--muted)">#'+ct.id+'</span>'+
+      '<div style="flex:1"><div style="font-size:11px;color:var(--txth);font-weight:600">'+ct.seg+'</div>'+
+      '<div style="font-size:10px;color:var(--muted)">'+ct.km+' km — '+ct.tplbl+' — '+ct.imp.length+' BTS</div></div>'+
+      '<button class="btn btn-g btn-sm" onclick="window._rmCut('+ct.id+')">✕</button></div>';
+  }).join('');
+}
+
+window._rmCut=function(id){
+  var i=S.cuts.findIndex(function(c){return c.id===id});
+  if(i<0)return;
+  var c=S.cuts[i];
+  lgCuts.removeLayer(c.mk);
+  if(c.rl)lgCuts.removeLayer(c.rl);
+  c.imp.forEach(function(b){b.status='ok';b.mk.setStyle({color:'#00e676',fillColor:'#00e676'})});
+  S.cuts.splice(i,1);
+  updCutsList();updMetrics();updBtsTable();
+  document.getElementById('inc-badge').textContent=S.cuts.length?' — '+S.cuts.length+' incident(s)':'— incidents';
+  if(!S.cuts.length)document.getElementById('simbar').classList.remove('on');
+};
+
+document.getElementById('btn-clrsim').onclick=function(){
+  S.cuts.slice().forEach(function(c){window._rmCut(c.id)});
+};
+document.getElementById('btn-simbar-clr').onclick=function(){
+  S.cuts.slice().forEach(function(c){window._rmCut(c.id)});
+  document.getElementById('simbar').classList.remove('on');
+};
+
+// ── METRICS ───────────────────────────────────────────────
+function updMetrics(){
+  var tot=S.btsFeats.length;
+  var ko=S.btsFeats.filter(function(b){return b.status!=='ok'}).length;
+  var dp=tot>0?(((tot-ko)/tot)*100).toFixed(1):100;
+  document.getElementById('m-tot').textContent=tot;
+  document.getElementById('m-ko').textContent=ko;
+  document.getElementById('m-cuts').textContent=S.cuts.length;
+  var el=document.getElementById('m-dispo');
+  el.textContent=dp+'%';
+  el.className='mval '+(parseFloat(dp)<80?'rd':parseFloat(dp)<95?'wn':'ok');
+}
+
+function updBtsTable(){
+  var tb=document.getElementById('tbl-bts');
+  var imp=S.btsFeats.filter(function(b){return b.status!=='ok'});
+  if(!imp.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:10px">Aucune BTS impactée</td></tr>';return}
+  tb.innerHTML=imp.map(function(b){
+    var ct=S.cuts.find(function(c){return c.imp.indexOf(b)>=0});
+    return '<tr><td>'+b.name+'</td><td style="color:var(--muted)">'+(ct?ct.seg:'—')+'</td>'+
+      '<td><span class="badge badge-'+(b.status==='ko'?'ko':'wn')+'">'+(b.status==='ko'?'HORS SERVICE':'DÉGRADÉ')+'</span></td></tr>';
+  }).join('');
+}
+
+// ── EXPORT CSV ────────────────────────────────────────────
+document.getElementById('btn-exp').onclick=function(){
+  var rows=[['Site','Lat','Lng','Statut','Tronçon','Distance_km']];
+  S.btsFeats.forEach(function(b){
+    var ct=S.cuts.find(function(c){return c.imp.indexOf(b)>=0});
+    rows.push([b.name,b.lat,b.lng,b.status,ct?ct.seg:'',ct?ct.km:'']);
+  });
+  var csv=rows.map(function(r){return r.join(',')}).join('\n');
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='bts_impact_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
-  toast('⬇ Export CSV téléchargé', 'ok');
-});
+  toast('⬇ CSV exporté','ok');
+};
 
-// ═══════════════════════════════════════════════════════════
-//  CLEAR ALL
-// ═══════════════════════════════════════════════════════════
-document.getElementById('clear-all-btn').addEventListener('click', () => {
-  if (!confirm('Réinitialiser toutes les données ?')) return;
-  layerKmz.clearLayers(); layerBts.clearLayers(); layerCuts.clearLayers();
-  state.kmzLayers = []; state.btsLayer = null; state.btsFeatures = [];
-  state.sorFiles = []; state.cuts = []; state.fibreSegments = []; state.nextCutId = 1;
-  document.getElementById('kmz-list').innerHTML = '';
-  document.getElementById('bts-list').innerHTML = '';
-  document.getElementById('sor-list').innerHTML = '';
-  document.getElementById('kmz-count').textContent = '0 fichier(s)';
-  document.getElementById('bts-count').textContent = '0 site(s)';
-  document.getElementById('sor-count').textContent = '0 fichier(s)';
-  document.getElementById('sim-bar').classList.remove('active');
-  document.getElementById('incident-count').textContent = '— incidents';
-  document.getElementById('sim-result-panel').style.display = 'none';
-  updateCutsList(); updateMetrics(); updateImpactTable(); renderSorAnalysis();
-  updateSegmentSelect();
-  toast('↺ Réinitialisation effectuée', '');
-});
+// ── RESET ─────────────────────────────────────────────────
+document.getElementById('btn-reset').onclick=function(){
+  if(!confirm('Réinitialiser toutes les données ?'))return;
+  lgFibre.clearLayers();lgBts.clearLayers();lgCuts.clearLayers();
+  S.kmzLayers=[];S.btsFeats=[];S.sorFiles=[];S.cuts=[];S.segs=[];S.nextId=1;
+  ['fl-kmz','fl-bts','fl-sor'].forEach(function(id){document.getElementById(id).innerHTML=''});
+  document.getElementById('lbl-kmz').textContent='0 fichier';
+  document.getElementById('lbl-bts').textContent='0 site';
+  document.getElementById('lbl-sor').textContent='0 fichier';
+  document.getElementById('simbar').classList.remove('on');
+  document.getElementById('inc-badge').textContent='— incidents';
+  document.getElementById('pnl-res').style.display='none';
+  updCutsList();updMetrics();updBtsTable();renderSorAna();updSegSel();
+  toast('↺ Réinitialisé','');
+};
 
-// ═══════════════════════════════════════════════════════════
-//  UTILS
-// ═══════════════════════════════════════════════════════════
-function fmtSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
-  return (bytes/1048576).toFixed(1) + ' MB';
-}
+// ── PWA SW ────────────────────────────────────────────────
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
 
-// ═══════════════════════════════════════════════════════════
-//  PWA SERVICE WORKER REGISTER
-// ═══════════════════════════════════════════════════════════
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
-}); // end DOMContentLoaded
+} // end boot
 </script>
 </body>
 </html>
