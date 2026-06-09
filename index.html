@@ -551,21 +551,40 @@ document.getElementById('sel-base').onchange=function(){
 // ── FIT VIEW ──────────────────────────────────────────────
 function fitView(){
   var pts=[];
-  S.kmzLayers.forEach(function(kl){kl.segs.forEach(function(s){s.lls.forEach(function(p){pts.push(p)})})});
+  S.kmzLayers.forEach(function(kl){
+    kl.segs.forEach(function(s){
+      // Sample every 5th point to avoid performance issues on large files
+      for(var i=0;i<s.lls.length;i+=Math.max(1,Math.floor(s.lls.length/100)))
+        pts.push(s.lls[i]);
+    });
+  });
   S.btsFeats.forEach(function(b){pts.push([b.lat,b.lng])});
   if(!pts.length){MAP.cx=14.5;MAP.cy=-14.5;MAP.zoom=6;draw();return}
+
+  // Filter out impossible coordinates
+  pts=pts.filter(function(p){return p[0]>=-90&&p[0]<=90&&p[1]>=-180&&p[1]<=180});
+  if(!pts.length){draw();return}
+
   var minLat=pts[0][0],maxLat=pts[0][0],minLng=pts[0][1],maxLng=pts[0][1];
   pts.forEach(function(p){
     minLat=Math.min(minLat,p[0]);maxLat=Math.max(maxLat,p[0]);
     minLng=Math.min(minLng,p[1]);maxLng=Math.max(maxLng,p[1]);
   });
-  MAP.cx=(minLat+maxLat)/2;MAP.cy=(minLng+maxLng)/2;
-  var dLat=maxLat-minLat+0.5,dLng=maxLng-minLng+0.5;
-  MAP.zoom=Math.floor(Math.min(
-    Math.log2(canvas.height/(dLat/180*Math.pow(2,8)*TILE_SIZE/128)),
-    Math.log2(canvas.width/(dLng/360*Math.pow(2,8)*TILE_SIZE/128))
-  ));
-  MAP.zoom=Math.max(2,Math.min(14,MAP.zoom));
+
+  MAP.cx=(minLat+maxLat)/2;
+  MAP.cy=(minLng+maxLng)/2;
+
+  var dLat=maxLat-minLat, dLng=maxLng-minLng;
+  // Pad slightly
+  dLat=Math.max(dLat,0.05)+0.1;
+  dLng=Math.max(dLng,0.05)+0.1;
+
+  // Compute zoom to fit bounds in canvas
+  var zLat=Math.log2(canvas.height*180/(dLat*TILE_SIZE));
+  var zLng=Math.log2(canvas.width*360/(dLng*TILE_SIZE));
+  MAP.zoom=Math.max(4,Math.min(16, Math.floor(Math.min(zLat,zLng))-1));
+
+  console.log('[FIT] center',MAP.cx,MAP.cy,'zoom',MAP.zoom,'bounds',minLat,maxLat,minLng,maxLng);
   draw();
 }
 
@@ -607,115 +626,107 @@ function col(i){return COLS[i%COLS.length]}
 function fmtSz(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
 
 // ── KML PARSER ────────────────────────────────────────────
-// Note: getElementsByTagName() ignores XML namespaces (works with kml xmlns)
-// querySelector('LineString') FAILS when namespace is declared
+// getElementsByTagName() is namespace-agnostic — works with xmlns kml
 function parseKML(xmlStr){
   var parser=new DOMParser();
-  var doc=parser.parseFromString(xmlStr,'text/xml');
-  var segs=[];
-  var pts=[];
+  var doc=parser.parseFromString(xmlStr.trim(),'text/xml');
 
-  // Helper: get all elements by local tag name (namespace-safe)
+  // Check parse error
+  var parseErr=doc.querySelector('parsererror');
+  if(parseErr){ console.error('[KML] XML parse error:', parseErr.textContent.slice(0,200)); }
+
+  var segs=[];  // LineString features  -> used for fibre layer + tronçon select
+  var pts=[];   // Point features       -> used for BTS layer
+
+  // namespace-safe tag getter
   function byTag(root,tag){
-    // Try exact, then with namespace wildcard
     var r=root.getElementsByTagName(tag);
-    if(!r.length) r=root.getElementsByTagName('kml:'+tag);
-    return Array.from(r);
+    return r.length ? Array.from(r) : Array.from(root.getElementsByTagName('kml:'+tag));
   }
 
-  // Helper: find nearest ancestor Placemark and get its name
-  function pmName(el,fallback){
-    var cur=el.parentNode;
-    while(cur){
-      var tn=cur.localName||cur.tagName||'';
-      if(tn==='Placemark'||tn==='kml:Placemark'){
-        var names=byTag(cur,'name');
-        if(names.length) return names[0].textContent.trim()||fallback;
-        break;
-      }
-      cur=cur.parentNode;
-    }
-    return fallback;
-  }
+  // Get direct text child of element
+  function getText(el){ return el ? el.textContent.trim() : ''; }
 
-  // Parse coordinates text -> [[lat,lng], ...]
+  // Parse "lng,lat,alt lng,lat,alt ..." -> [[lat,lng],...]
   function parseCoords(txt){
-    return txt.trim().split(/\s+/).map(function(s){
-      var p=s.split(',');
-      if(p.length<2) return null;
-      var lng=parseFloat(p[0]),lat=parseFloat(p[1]);
-      if(isNaN(lat)||isNaN(lng)) return null;
-      return [lat,lng];
-    }).filter(Boolean);
+    var out=[];
+    txt.trim().split(/[\s,;\n]+/).reduce(function(acc,tok){
+      acc.push(tok);
+      if(acc.length===3||(acc.length===2)){
+        // handle both "lng,lat" and "lng,lat,alt" split by comma already
+      }
+      return acc;
+    },[]);
+    // Proper split: each tuple is "lng,lat[,alt]" separated by whitespace
+    var tuples=txt.trim().split(/\s+/);
+    tuples.forEach(function(t){
+      var p=t.split(',');
+      if(p.length>=2){
+        var lng=parseFloat(p[0]), lat=parseFloat(p[1]);
+        if(!isNaN(lat)&&!isNaN(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180)
+          out.push([lat,lng]);
+      }
+    });
+    return out;
   }
 
-  // All Placemarks
-  var placemarks=byTag(doc,'Placemark');
-  console.log('[KML] Placemarks found:', placemarks.length);
+  // Recursively get all Placemarks (handles nested Folder/Document)
+  function getPlacemarks(root){
+    return Array.from(root.getElementsByTagName('Placemark'))
+      .concat(Array.from(root.getElementsByTagName('kml:Placemark')));
+  }
+
+  var placemarks=getPlacemarks(doc);
+  console.log('[KML] Total Placemarks:', placemarks.length);
 
   placemarks.forEach(function(pm,idx){
-    var nameEls=byTag(pm,'name');
-    var name=(nameEls.length?nameEls[0].textContent.trim():null)||('Feature_'+idx);
+    // Name: direct <name> child preferred
+    var nameEl=byTag(pm,'name')[0];
+    var name=nameEl?getText(nameEl):('Feature_'+idx);
+    if(!name)name='Feature_'+idx;
 
-    // LineString
-    var lineEls=byTag(pm,'LineString');
-    lineEls.forEach(function(ls){
-      var coordEls=byTag(ls,'coordinates');
-      if(!coordEls.length) coordEls=byTag(pm,'coordinates'); // fallback
-      coordEls.forEach(function(cel){
-        var lls=parseCoords(cel.textContent);
-        if(lls.length>1){
-          console.log('[KML] LineString "'+name+'" ->',lls.length,'pts');
-          segs.push({name:name,lls:lls});
-        }
-      });
+    var hasLine=false;
+
+    // ── LineString (direct or inside MultiGeometry) ──
+    byTag(pm,'LineString').forEach(function(ls){
+      var coordEl=byTag(ls,'coordinates')[0];
+      if(!coordEl)return;
+      var lls=parseCoords(getText(coordEl));
+      if(lls.length>1){
+        segs.push({name:name, lls:lls});
+        hasLine=true;
+        console.log('[KML] LineString "'+name+'" pts='+lls.length);
+      }
     });
 
-    // MultiGeometry > LineString
-    var mgEls=byTag(pm,'MultiGeometry');
-    mgEls.forEach(function(mg){
-      byTag(mg,'LineString').forEach(function(ls,i){
-        var coordEls=byTag(ls,'coordinates');
-        coordEls.forEach(function(cel){
-          var lls=parseCoords(cel.textContent);
-          if(lls.length>1){
-            segs.push({name:name+'_'+i,lls:lls});
-          }
-        });
-      });
-    });
-
-    // Point
-    var ptEls=byTag(pm,'Point');
-    ptEls.forEach(function(pt){
-      var coordEls=byTag(pt,'coordinates');
-      coordEls.forEach(function(cel){
-        var lls=parseCoords(cel.textContent);
+    // ── Point (only if no LineString in same Placemark) ──
+    if(!hasLine){
+      byTag(pm,'Point').forEach(function(pt){
+        var coordEl=byTag(pt,'coordinates')[0];
+        if(!coordEl)return;
+        var lls=parseCoords(getText(coordEl));
         if(lls.length>0){
-          console.log('[KML] Point "'+name+'" ->',lls[0]);
-          pts.push({name:name,lat:lls[0][0],lng:lls[0][1]});
+          pts.push({name:name, lat:lls[0][0], lng:lls[0][1]});
+          console.log('[KML] Point "'+name+'"', lls[0]);
         }
       });
-    });
+    }
   });
 
-  // Fallback: if no Placemarks found, try raw coordinates tags
+  // ── Fallback: scan all coordinate blocks if nothing found ──
   if(!segs.length && !pts.length){
-    console.warn('[KML] No Placemarks — trying raw coordinates scan');
-    var allCoords=byTag(doc,'coordinates');
-    allCoords.forEach(function(cel,i){
-      var lls=parseCoords(cel.textContent);
-      var parentTag=(cel.parentNode&&(cel.parentNode.localName||cel.parentNode.tagName))||'';
-      if(parentTag==='LineString'||parentTag==='kml:LineString'){
-        if(lls.length>1) segs.push({name:'Segment_'+i,lls:lls});
-      } else if(parentTag==='Point'||parentTag==='kml:Point'){
-        if(lls.length>0) pts.push({name:'Site_'+i,lat:lls[0][0],lng:lls[0][1]});
-      }
+    console.warn('[KML] Fallback: scanning raw <coordinates> blocks');
+    byTag(doc,'coordinates').forEach(function(cel,i){
+      var pTag=(cel.parentNode&&(cel.parentNode.localName||cel.parentNode.tagName||''))||'';
+      pTag=pTag.replace('kml:','');
+      var lls=parseCoords(getText(cel));
+      if(pTag==='LineString'&&lls.length>1) segs.push({name:'Seg_'+i, lls:lls});
+      else if(pTag==='Point'&&lls.length>0) pts.push({name:'Site_'+i, lat:lls[0][0], lng:lls[0][1]});
     });
   }
 
-  console.log('[KML] Result: segs='+segs.length+' pts='+pts.length);
-  return{segs:segs,pts:pts};
+  console.log('[KML] DONE segs='+segs.length+' pts='+pts.length);
+  return{segs:segs, pts:pts};
 }
 
 // ── KMZ READER (ZIP) ──────────────────────────────────────
@@ -855,36 +866,61 @@ function loadBtsFile(file){
     var process=function(kmlStr){
       if(!kmlStr){toast('❌ Impossible de lire BTS: '+file.name,'rd');return}
       var parsed=parseKML(kmlStr);
-      // Accept both Points and LineString start points as BTS
-      parsed.pts.forEach(function(p){S.btsFeats.push({name:p.name,lat:p.lat,lng:p.lng,status:'ok'})});
-      if(!S.btsFeats.length && parsed.segs.length){
-        // No Points? Use first point of each LineString as BTS site
-        parsed.segs.forEach(function(s){
-          if(s.lls.length) S.btsFeats.push({name:s.name,lat:s.lls[0][0],lng:s.lls[0][1],status:'ok'});
+      console.log('[BTS] parsed pts='+parsed.pts.length+' segs='+parsed.segs.length);
+
+      if(parsed.pts.length>0){
+        // Normal case: KMZ has Point placemarks = BTS sites
+        parsed.pts.forEach(function(p){
+          S.btsFeats.push({name:p.name,lat:p.lat,lng:p.lng,status:'ok'});
         });
-        console.warn('[BTS] No Point geometries found, using LineString origins as BTS');
+      } else if(parsed.segs.length>0){
+        // Fallback: BTS KMZ might use LineStrings (cables between sites)
+        // Use each unique endpoint as a site
+        var seen={};
+        parsed.segs.forEach(function(s){
+          [s.lls[0], s.lls[s.lls.length-1]].forEach(function(ll,i){
+            var key=ll[0].toFixed(5)+','+ll[1].toFixed(5);
+            if(!seen[key]){
+              seen[key]=1;
+              S.btsFeats.push({name:s.name+(i===0?'_A':'_B'),lat:ll[0],lng:ll[1],status:'ok'});
+            }
+          });
+        });
+        console.warn('[BTS] Used LineString endpoints as BTS sites: '+S.btsFeats.length);
       }
+
+      if(!S.btsFeats.length){
+        toast('⚠ Aucun site trouvé — vérifiez que le KMZ contient des Points (pas seulement des lignes)','wn');
+        console.error('[BTS] KML content snippet:', kmlStr.slice(0,600));
+        return;
+      }
+
       document.getElementById('lbl-bts').textContent=S.btsFeats.length+' site(s)';
       document.getElementById('m-tot').textContent=S.btsFeats.length;
       document.getElementById('fl-bts').innerHTML=
         '<div class="fi"><div class="fd" style="background:#00e676"></div>'+
-        '<span class="fn">'+file.name+'</span><span class="fsz">'+fmtSz(file.size)+'</span>'+
+        '<span class="fn">'+file.name+'</span>'+
+        '<span class="fsz">'+fmtSz(file.size)+' — '+S.btsFeats.length+' sites</span>'+
         '<button class="fdel" onclick="_rmBts()">✕</button></div>';
       updMetrics();fitView();
-      toast(S.btsFeats.length>0?('✅ '+S.btsFeats.length+' BTS chargées'):'⚠ Aucun site trouvé dans '+file.name,
-        S.btsFeats.length>0?'ok':'wn');
+      toast('✅ '+S.btsFeats.length+' BTS chargées','ok');
       draw();
     };
+
+    var tryAsText=function(){
+      try{
+        var txt=new TextDecoder('utf-8').decode(e.target.result);
+        if(txt.indexOf('<kml')>=0||txt.indexOf('<Placemark')>=0){ process(txt); return true; }
+      }catch(ex){}
+      return false;
+    };
+
     if(file.name.toLowerCase().endsWith('.kml')){
       process(new TextDecoder('utf-8').decode(e.target.result));
     } else {
       readKMZ(e.target.result).then(function(kml){
         if(!kml){
-          try{
-            var txt=new TextDecoder('utf-8').decode(e.target.result);
-            if(txt.indexOf('<kml')>=0||txt.indexOf('<Placemark')>=0){process(txt)}
-            else{toast('❌ KMZ BTS illisible','rd')}
-          } catch(ex){toast('❌ KMZ BTS illisible','rd')}
+          if(!tryAsText()) toast('❌ KMZ illisible — exportez en .kml depuis Google Earth','rd');
         } else { process(kml); }
       });
     }
@@ -992,19 +1028,37 @@ function renderSorAna(){
 }
 
 // ── SEGMENT SELECT ────────────────────────────────────────
+// Shows only LineString segments (fibre sections), NOT manholes/points
 function updSegSel(){
   var sel=document.getElementById('sel-seg');
   sel.innerHTML='<option value="">— Choisir un tronçon —</option>';
+  // Group segments by layer for readability
+  var lastLayer='';
   S.segs.forEach(function(s,i){
-    var d=s.lls.reduce(function(acc,pt,j){
-      if(j===0)return 0;
-      var prev=s.lls[j-1];
-      var R=6371;
-      var dLat=(pt[0]-prev[0])*Math.PI/180,dLng=(pt[1]-prev[1])*Math.PI/180;
-      var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(prev[0]*Math.PI/180)*Math.cos(pt[0]*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
-      return acc+R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    },0);
-    var o=document.createElement('option');o.value=i;o.textContent=s.name+' ('+d.toFixed(1)+' km)';sel.appendChild(o);
+    // Compute length using Haversine
+    var d=0,R=6371;
+    for(var j=1;j<s.lls.length;j++){
+      var dLat=(s.lls[j][0]-s.lls[j-1][0])*Math.PI/180;
+      var dLng=(s.lls[j][1]-s.lls[j-1][1])*Math.PI/180;
+      var a=Math.sin(dLat/2)*Math.sin(dLat/2)
+          +Math.cos(s.lls[j-1][0]*Math.PI/180)*Math.cos(s.lls[j][0]*Math.PI/180)
+          *Math.sin(dLng/2)*Math.sin(dLng/2);
+      d+=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    }
+    // Add layer separator if changed
+    if(s.layerName && s.layerName!==lastLayer){
+      var grp=document.createElement('optgroup');
+      grp.label='📁 '+s.layerName.replace(/\.kmz$|\.kml$/i,'');
+      sel.appendChild(grp);
+      lastLayer=s.layerName;
+    }
+    var o=document.createElement('option');
+    o.value=i;
+    o.textContent=s.name+' ('+d.toFixed(1)+' km)';
+    // append to last optgroup if exists, else to select
+    var grps=sel.querySelectorAll('optgroup');
+    if(grps.length) grps[grps.length-1].appendChild(o);
+    else sel.appendChild(o);
   });
 }
 
