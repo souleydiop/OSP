@@ -1,88 +1,969 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0a1628">
-    <link rel="manifest" href="manifest.json">
-    <title>FibreOps — Incidents Fibre</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-            --bg: #0a1628; --surf: #0f1f3d; --panel: #162040; --bord: #1e3058;
-            --cyan: #00e5ff; --red: #ff3d5a; --warn: #ffb020; --ok: #00e676;
-            --muted: #4a6080; --txt: #c8daf0; --txth: #eaf3ff;
-            --mono: 'Courier New', monospace; --sans: system-ui, sans-serif;
-        }
-        html, body {
-            height: 100%; background: var(--bg); color: var(--txt);
-            font-family: var(--sans); font-size: 14px; overflow: hidden;
-        }
-        #app { display: flex; flex-direction: column; height: 100vh; }
-        header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 16px; height: 50px; background: var(--surf);
-            border-bottom: 1px solid var(--bord); z-index: 100; flex-shrink: 0;
-        }
-        .logo-text { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--cyan); }
-        .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
-        .logo { display: flex; align-items: center; gap: 10px; }
-        #hdr-r { display: flex; gap: 8px; align-items: center; }
-        #inc-b { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-        #main { display: flex; flex: 1; overflow: hidden; position: relative; }
-        
-        /* SIDEBAR */
-        #sb {
-            width: 310px; background: var(--surf); border-right: 1px solid var(--bord);
-            display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
-            transition: width .2s;
-        }
-        #sb.hide { width: 0; }
-        .sb-in { width: 310px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-        #sb-tog {
-            position: absolute; left: 310px; top: 50%; transform: translateY(-50%);
-            z-index: 200; background: var(--surf); border: 1px solid var(--bord);
-            border-left: none; border-radius: 0 5px 5px 0; padding: 8px 5px;
-            cursor: pointer; color: var(--muted); transition: left .2s;
-        }
-        #sb.hide ~ #sb-tog { left: 0; }
-        .tabs { display: flex; border-bottom: 1px solid var(--bord); flex-shrink: 0; }
-        .tab {
-            flex: 1; padding: 9px 4px; font-size: 11px; font-weight: 600;
-            text-transform: uppercase; letter-spacing: .7px; color: var(--muted);
-            background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent;
-            transition: all .15s;
-        }
-        .tab.on { color: var(--cyan); border-bottom-color: var(--cyan); }
-        .tc { display: none; flex: 1; overflow-y: auto; padding: 11px; flex-direction: column; gap: 9px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#0a1628">
+<link rel="manifest" href="manifest.json">
+<title>FibreOps — Incidents Fibre</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a1628;--surf:#0f1f3d;--panel:#162040;--bord:#1e3058;
+  --cyan:#00e5ff;--red:#ff3d5a;--warn:#ffb020;--ok:#00e676;
+  --muted:#4a6080;--txt:#c8daf0;--txth:#eaf3ff;
+  --mono:'Courier New',monospace;--sans:system-ui,sans-serif}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14px;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:50px;
+  background:var(--surf);border-bottom:1px solid var(--bord);z-index:100;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-text{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--cyan)}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase}
+#hdr-r{display:flex;gap:8px;align-items:center}
+#inc-b{font-family:var(--mono);font-size:12px;color:var(--muted)}
+#main{display:flex;flex:1;overflow:hidden;position:relative}
+#sb{width:310px;background:var(--surf);border-right:1px solid var(--bord);
+  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;transition:width .2s}
+#sb.hide{width:0}
+.sb-in{width:310px;display:flex;flex-direction:column;height:100%;overflow:hidden}
+#sb-tog{position:absolute;left:310px;top:50%;transform:translateY(-50%);z-index:600;
+  background:var(--surf);border:1px solid var(--bord);border-left:none;
+  border-radius:0 5px 5px 0;padding:8px 5px;cursor:pointer;color:var(--muted);transition:left .2s}
+#sb.hide~#sb-tog{left:0}
+.tabs{display:flex;border-bottom:1px solid var(--bord);flex-shrink:0}
+.tab{flex:1;padding:9px 4px;font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.7px;color:var(--muted);background:none;border:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s}
+.tab.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+.tc{display:none;flex:1;overflow-y:auto;padding:11px;flex-direction:column;gap:9px}
+.tc.on{display:flex}
+.pnl{background:var(--panel);border:1px solid var(--bord);border-radius:7px;overflow:hidden}
+.pnl-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;
+  border-bottom:1px solid var(--bord);background:rgba(255,255,255,.02)}
+.pnl-t{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--cyan);
+  letter-spacing:1px;text-transform:uppercase}
+.pnl-b{padding:11px;display:flex;flex-direction:column;gap:8px}
+.upz{border:1.5px dashed var(--bord);border-radius:6px;padding:13px;text-align:center;
+  cursor:pointer;transition:all .2s;position:relative}
+.upz:hover,.upz.drag{border-color:var(--cyan);background:rgba(0,229,255,.04)}
+.upz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.up-ico{font-size:20px;margin-bottom:4px}
+.up-lbl{font-size:12px;color:var(--txt)}
+.up-hint{font-size:10px;color:var(--muted);margin-top:2px}
+.flist{display:flex;flex-direction:column;gap:4px}
+.fi{display:flex;align-items:center;gap:7px;padding:5px 7px;background:rgba(0,0,0,.2);
+  border-radius:4px;border:1px solid var(--bord)}
+.fd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fn{flex:1;font-family:var(--mono);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsz{font-size:10px;color:var(--muted);flex-shrink:0}
+.fdel{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px}
+.fdel:hover{color:var(--red)}
+.cr{display:flex;align-items:center;gap:8px}
+.cl{font-size:11px;color:var(--muted);flex-shrink:0;min-width:70px}
+.ci{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--bord);border-radius:4px;
+  color:var(--txth);font-family:var(--mono);font-size:12px;padding:5px 7px;outline:none;transition:border-color .15s}
+.ci:focus{border-color:var(--cyan)}
+select.ci option{background:var(--panel)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:5px;
+  border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;
+  text-transform:uppercase;letter-spacing:.3px}
+.bp{background:var(--cyan);color:#0a1628}.bp:hover{background:#33eaff}
+.bd{background:var(--red);color:#fff}.bd:hover{background:#ff6070}
+.bg{background:transparent;color:var(--txt);border:1px solid var(--bord)}.bg:hover{border-color:var(--cyan);color:var(--cyan)}
+.bw{background:var(--warn);color:#0a1628}.bw:hover{background:#ffc040}
+.bsm{padding:5px 9px;font-size:11px}.bf{width:100%;justify-content:center}
+.tr{display:flex;align-items:center;justify-content:space-between;padding:2px 0}
+.tr span{font-size:12px;color:var(--txt)}
+.tog{position:relative;width:38px;height:20px}
+.tog input{display:none}
+.ts{position:absolute;inset:0;background:var(--bord);border-radius:20px;cursor:pointer;transition:background .2s}
+.ts::before{content:'';position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:3px;left:3px;transition:transform .2s}
+.tog input:checked+.ts{background:var(--cyan)}
+.tog input:checked+.ts::before{transform:translateX(18px)}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mc{background:rgba(0,0,0,.25);border:1px solid var(--bord);border-radius:6px;padding:10px}
+.mv{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1}
+.mv.rd{color:var(--red)}.mv.wn{color:var(--warn)}.mv.ok{color:var(--ok)}.mv.cy{color:var(--cyan)}
+.ml{font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.7px}
+.bt{width:100%;border-collapse:collapse;font-size:11px}
+.bt th{text-align:left;color:var(--muted);font-weight:600;padding:4px 5px;border-bottom:1px solid var(--bord);font-family:var(--mono);font-size:10px;text-transform:uppercase}
+.bt td{padding:5px;border-bottom:1px solid rgba(30,48,88,.4);font-family:var(--mono)}
+.bt tr:last-child td{border-bottom:none}
+.bk{display:inline-block;padding:2px 5px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase}
+.bk.ok{background:rgba(0,230,118,.15);color:var(--ok)}
+.bk.ko{background:rgba(255,61,90,.15);color:var(--red)}
+.bk.wn{background:rgba(255,176,32,.15);color:var(--warn)}
+.sv{border-left:3px solid var(--warn);padding:7px 9px;background:rgba(255,176,32,.06);border-radius:0 4px 4px 0;margin-bottom:5px}
+.sv.cr{border-left-color:var(--red);background:rgba(255,61,90,.06)}
+.sv.nf{border-left-color:var(--cyan);background:rgba(0,229,255,.04)}
+.sv-t{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--txth)}
+.sv-d{font-size:11px;color:var(--muted);margin-top:2px}
+#map{flex:1;z-index:1}
+.leaflet-container{background:#08111f!important}
+.mov{position:absolute;z-index:500;background:var(--surf);border:1px solid var(--bord);border-radius:8px;padding:9px 13px;pointer-events:auto}
+#mc{top:10px;right:10px}
+#simbar{bottom:16px;left:50%;transform:translateX(-50%);min-width:280px;display:none}
+#simbar.on{display:block}
+#simbar .st{font-family:var(--mono);font-size:11px;color:var(--warn);font-weight:700;margin-bottom:6px}
+#simbar .sr{display:flex;align-items:center;gap:8px}
+#toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surf);border:1px solid var(--bord);border-radius:7px;
+  padding:9px 18px;font-size:13px;color:var(--txth);z-index:9999;
+  opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.rd{border-color:var(--red);color:var(--red)}
+#toast.ok{border-color:var(--ok);color:var(--ok)}
+#toast.wn{border-color:var(--warn);color:var(--warn)}
+.empty{text-align:center;padding:18px 8px;color:var(--muted)}
+.empty .ei{font-size:26px;margin-bottom:6px;opacity:.4}
+.empty p{font-size:12px;line-height:1.5}
+.div{height:1px;background:var(--bord);margin:3px 0}
+.leg{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--txt);padding:2px 0}
+.ld{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.ll{width:18px;height:3px;flex-shrink:0;border-radius:2px}
+/* Leaflet popup dark */
+.leaflet-popup-content-wrapper{background:var(--panel);color:var(--txt);border:1px solid var(--bord);border-radius:7px}
+.leaflet-popup-tip{background:var(--panel)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bord);border-radius:2px}
+</style>
 </head>
 <body>
-    <div id="app">
-        <header>
-            <div class="logo">
-                <span class="logo-text">FibreOps</span>
-                <span class="logo-sub">Incidents</span>
-            </div>
-            <div id="hdr-r">
-                <span id="inc-b">Statut: OK</span>
-            </div>
-        </header>
-        
-        <div id="main">
-            <div id="sb">
-                <div class="sb-in">
-                    <div class="tabs">
-                        <button class="tab on">Actifs</button>
-                        <button class="tab">Archives</button>
-                    </div>
-                    <div class="tc" style="display: flex;">
-                        <p>Liste des incidents...</p>
-                    </div>
-                </div>
-            </div>
-            <button id="sb-tog">&lt;</button>
-        </div>
+<div id="app">
+  <header>
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+        <circle cx="13" cy="13" r="12" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="4 2"/>
+        <path d="M5 13 Q9 7 13 13 Q17 19 21 13" stroke="#00e5ff" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="13" cy="13" r="2.5" fill="#ff3d5a"/>
+      </svg>
+      <div><div class="logo-text">FibreOps</div><div class="logo-sub">Incident Manager</div></div>
     </div>
+    <div id="hdr-r">
+      <span id="inc-b">— incidents</span>
+      <button class="btn bg bsm" id="btn-reset">↺ Reset</button>
+    </div>
+  </header>
+  <div id="main">
+    <div id="sb">
+      <div class="sb-in">
+        <div class="tabs">
+          <button class="tab on" data-t="data">📂 Données</button>
+          <button class="tab" data-t="sim">⚡ Sim</button>
+          <button class="tab" data-t="ana">📊 Analyse</button>
+        </div>
+        <!-- DATA -->
+        <div class="tc on" id="tc-data">
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">🔵 Fibre KMZ/KML</span><span id="lbl-kmz" style="font-size:10px;color:var(--muted)">0 fichier</span></div>
+            <div class="pnl-b">
+              <div class="upz" id="z-kmz"><input type="file" id="in-kmz" accept=".kmz,.kml" multiple>
+                <div class="up-ico">📡</div><div class="up-lbl">KMZ / KML multi-fichiers</div>
+                <div class="up-hint">Tracés fibre optique</div></div>
+              <div class="flist" id="fl-kmz"></div>
+              <div class="tr"><span>Afficher tracés fibre</span>
+                <label class="tog"><input type="checkbox" id="tog-fibre" checked><span class="ts"></span></label></div>
+            </div>
+          </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">🟢 Base Sites KMZ</span><span id="lbl-bts" style="font-size:10px;color:var(--muted)">0 site</span></div>
+            <div class="pnl-b">
+              <div class="upz" id="z-bts"><input type="file" id="in-bts" accept=".kmz,.kml">
+                <div class="up-ico">📶</div><div class="up-lbl">Base Sites — KMZ/KML</div>
+                <div class="up-hint">Tous types de geometrie acceptés</div></div>
+              <div class="flist" id="fl-bts"></div>
+              <div class="tr"><span>Afficher sites</span>
+                <label class="tog"><input type="checkbox" id="tog-bts" checked><span class="ts"></span></label></div>
+            </div>
+          </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">🟡 OTDR .sor</span><span id="lbl-sor" style="font-size:10px;color:var(--muted)">0 fichier</span></div>
+            <div class="pnl-b">
+              <div class="upz" id="z-sor"><input type="file" id="in-sor" accept=".sor,.SOR" multiple>
+                <div class="up-ico">📉</div><div class="up-lbl">Fichiers OTDR .sor</div>
+                <div class="up-hint">Analyse automatique des événements</div></div>
+              <div class="flist" id="fl-sor"></div>
+            </div>
+          </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">🗺 Légende</span></div>
+            <div class="pnl-b">
+              <div class="leg"><div class="ll" style="background:#00e5ff"></div>Fibre active</div>
+              <div class="leg"><div class="ll" style="background:#ff3d5a"></div>Segment coupé</div>
+              <div class="leg"><div class="ld" style="background:#00e676"></div>Site nominal</div>
+              <div class="leg"><div class="ld" style="background:#ff3d5a"></div>Site hors service</div>
+              <div class="leg"><div class="ld" style="background:#ffb020"></div>Site dégradé</div>
+              <div class="leg"><div class="ld" style="background:#ff3d5a;box-shadow:0 0 5px #ff3d5a"></div>Point de coupure</div>
+            </div>
+          </div>
+        </div>
+        <!-- SIM -->
+        <div class="tc" id="tc-sim">
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">⚡ Simuler coupure</span></div>
+            <div class="pnl-b">
+              <div class="cr"><span class="cl">Câble</span>
+                <select class="ci" id="sel-seg"><option value="">— Choisir un câble —</option></select></div>
+              <div id="seg-info" style="display:none;font-size:11px;color:var(--muted);padding:4px 0;font-family:var(--mono)"></div>
+              <div class="cr"><span class="cl">Distance</span>
+                <input class="ci" id="inp-km" type="number" min="0" step="0.01" placeholder="km depuis extrémité A"></div>
+              <div class="cr"><span class="cl">Type</span>
+                <select class="ci" id="sel-type">
+                  <option value="cut">Coupure totale</option>
+                  <option value="partial">Dégradation partielle</option>
+                  <option value="bend">Courbure excessive</option>
+                </select></div>
+              <button class="btn bw bf" id="btn-sim">⚡ Lancer la simulation</button>
+              <button class="btn bg bf bsm" id="btn-clrsim">Effacer toutes les coupures</button>
+            </div>
+          </div>
+          <div class="pnl" id="pnl-res" style="display:none">
+            <div class="pnl-h"><span class="pnl-t">🎯 Résultat</span></div>
+            <div class="pnl-b" id="res-body"></div>
+          </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">✂️ Coupures actives</span></div>
+            <div class="pnl-b" id="cuts-list">
+              <div class="empty"><div class="ei">✂️</div><p>Aucune coupure simulée</p></div>
+            </div>
+          </div>
+        </div>
+        <!-- ANALYSE -->
+        <div class="tc" id="tc-ana">
+          <div class="mg">
+            <div class="mc"><div class="mv cy" id="m-tot">0</div><div class="ml">Sites total</div></div>
+            <div class="mc"><div class="mv rd" id="m-ko">0</div><div class="ml">Sites impactés</div></div>
+            <div class="mc"><div class="mv wn" id="m-cuts">0</div><div class="ml">Coupures</div></div>
+            <div class="mc"><div class="mv ok" id="m-dispo">100%</div><div class="ml">Dispo réseau</div></div>
+          </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">📉 Analyse SOR / OTDR</span></div>
+            <div class="pnl-b" id="sor-ana">
+              <div class="empty"><div class="ei">📉</div><p>Uploader des .sor</p></div>
+            </div>
+          </div>
+          <div class="pnl">
+            <div class="pnl-h"><span class="pnl-t">📶 Sites impactés</span>
+              <button class="btn bg bsm" id="btn-exp">⬇ CSV</button></div>
+            <div style="overflow-x:auto">
+              <table class="bt"><thead><tr><th>Site</th><th>Câble</th><th>Statut</th></tr></thead>
+                <tbody id="tbl-bts"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:10px">—</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button id="sb-tog">◀</button>
+    <div id="map-wrap" style="flex:1;position:relative;overflow:hidden;display:flex">
+      <div id="map" style="flex:1"></div>
+      <div class="mov" id="mc">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Fond de carte</div>
+        <select class="ci" id="sel-base" style="width:150px;font-size:11px;padding:4px 7px">
+          <option value="osm">OpenStreetMap</option>
+          <option value="sat">Satellite (Esri)</option>
+          <option value="dark">Dark (CartoDB)</option>
+        </select>
+      </div>
+      <div class="mov" id="simbar">
+        <div class="st">⚡ COUPURE ACTIVE</div>
+        <div class="sr">
+          <span id="simbar-info" style="font-size:11px;font-family:var(--mono);flex:1;color:var(--txt)"></span>
+          <button class="btn bd bsm" id="btn-simbar-clr">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ── Load Leaflet dynamically then boot ────────────────────
+(function(){
+  var css=document.createElement('link');
+  css.rel='stylesheet';
+  css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+  document.head.appendChild(css);
+
+  var s=document.createElement('script');
+  s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  s.onload=boot;
+  s.onerror=function(){
+    document.getElementById('map').innerHTML=
+      '<div style="color:#ff3d5a;padding:40px;font-family:monospace;text-align:center">'
+      +'❌ Leaflet CDN inaccessible.<br>Ouvrez cette page depuis GitHub Pages ou un serveur web.</div>';
+  };
+  document.head.appendChild(s);
+})();
+
+function boot(){
+
+// ── STATE ─────────────────────────────────────────────────
+var S={
+  cables:[],    // {id, name, latlngs, polyline, color, totalKm, ptA, ptB}
+  btsFeats:[],  // {name, lat, lng, marker, status}
+  btsLayer:null,
+  sorFiles:[],
+  cuts:[],
+  nextId:1,
+  showFibre:true,
+  showBts:true
+};
+
+// ── MAP ───────────────────────────────────────────────────
+var map=L.map('map',{center:[14.5,-14.5],zoom:7,zoomControl:true,attributionControl:false});
+
+var BASES={
+  osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}),
+  sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}),
+  dark:L.tileLayer('https://{a}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19})
+};
+BASES.osm.addTo(map);
+
+var lgFibre=L.layerGroup().addTo(map);
+var lgBts  =L.layerGroup().addTo(map);
+var lgCuts =L.layerGroup().addTo(map);
+
+document.getElementById('sel-base').onchange=function(){
+  Object.values(BASES).forEach(function(l){map.removeLayer(l)});
+  BASES[this.value].addTo(map);
+};
+
+// ── TOAST ─────────────────────────────────────────────────
+var _tt;
+function toast(msg,cls){
+  var el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+(cls||'');
+  clearTimeout(_tt); _tt=setTimeout(function(){el.className=''},3000);
+}
+
+// ── TABS / SIDEBAR ────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(function(b){
+  b.onclick=function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+    document.querySelectorAll('.tc').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');
+    document.getElementById('tc-'+b.dataset.t).classList.add('on');
+  };
+});
+var sb=document.getElementById('sb');
+document.getElementById('sb-tog').onclick=function(){
+  sb.classList.toggle('hide');
+  this.textContent=sb.classList.contains('hide')?'▶':'◀';
+  setTimeout(function(){map.invalidateSize()},220);
+};
+
+// ── HELPERS ───────────────────────────────────────────────
+var COLS=['#00e5ff','#69f0ae','#ffb020','#ff6b6b','#b388ff','#40c4ff','#ccff90','#ff80ab'];
+function pickCol(i){return COLS[i%COLS.length]}
+function fmtSz(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
+
+// Haversine km between [lat,lng] arrays
+function haversine(a,b){
+  var R=6371,dLat=(b[0]-a[0])*Math.PI/180,dLng=(b[1]-a[1])*Math.PI/180;
+  var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function cableLen(lls){
+  var d=0;
+  for(var i=1;i<lls.length;i++) d+=haversine(lls[i-1],lls[i]);
+  return d;
+}
+function ptAtKm(lls,km){
+  var target=km*1000/1,acc=0; // km
+  // work in km directly
+  for(var i=1;i<lls.length;i++){
+    var seg=haversine(lls[i-1],lls[i]);
+    if(acc+seg>=km){
+      var f=(km-acc)/seg;
+      return[lls[i-1][0]+f*(lls[i][0]-lls[i-1][0]), lls[i-1][1]+f*(lls[i][1]-lls[i-1][1])];
+    }
+    acc+=seg;
+  }
+  return lls[lls.length-1];
+}
+
+// drag zones
+function dzone(zid,iid,cb){
+  var z=document.getElementById(zid),inp=document.getElementById(iid);
+  z.addEventListener('dragover',function(e){e.preventDefault();z.classList.add('drag')});
+  z.addEventListener('dragleave',function(){z.classList.remove('drag')});
+  z.addEventListener('drop',function(e){e.preventDefault();z.classList.remove('drag');cb(e.dataTransfer.files)});
+  inp.onchange=function(){if(inp.files.length)cb(inp.files); inp.value='';};
+}
+
+// ── KML PARSER ────────────────────────────────────────────
+// Uses getElementsByTagName (namespace-agnostic)
+function parseKML(xmlStr){
+  var parser=new DOMParser();
+  var doc=parser.parseFromString(xmlStr,'text/xml');
+  var lines=[], points=[];
+
+  function byTag(root,tag){
+    var r=Array.from(root.getElementsByTagName(tag));
+    if(!r.length) r=Array.from(root.getElementsByTagName('kml:'+tag));
+    return r;
+  }
+  function txt(el){return el?el.textContent.trim():''}
+
+  // parse "lng,lat[,alt] ..." whitespace-separated tuples -> [[lat,lng],...]
+  function parseCoords(raw){
+    var out=[];
+    raw.trim().split(/\s+/).forEach(function(t){
+      var p=t.split(',');
+      if(p.length<2)return;
+      var lng=parseFloat(p[0]),lat=parseFloat(p[1]);
+      if(!isNaN(lat)&&!isNaN(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180)
+        out.push([lat,lng]);
+    });
+    return out;
+  }
+
+  var pms=byTag(doc,'Placemark');
+  console.log('[KML] Placemarks:',pms.length);
+
+  pms.forEach(function(pm,i){
+    var nameEl=byTag(pm,'name')[0];
+    var name=nameEl?txt(nameEl):'Feature_'+i;
+    if(!name)name='Feature_'+i;
+
+    // LineStrings (cable = section fibre)
+    var lsEls=byTag(pm,'LineString');
+    lsEls.forEach(function(ls){
+      var ce=byTag(ls,'coordinates')[0];
+      if(!ce)return;
+      var lls=parseCoords(txt(ce));
+      if(lls.length>1) lines.push({name:name, lls:lls});
+    });
+
+    // MultiGeometry > LineString
+    byTag(pm,'MultiGeometry').forEach(function(mg){
+      byTag(mg,'LineString').forEach(function(ls,j){
+        var ce=byTag(ls,'coordinates')[0];
+        if(!ce)return;
+        var lls=parseCoords(txt(ce));
+        if(lls.length>1) lines.push({name:name+(j>0?'_'+j:''), lls:lls});
+      });
+    });
+
+    // Points — only if no LineString in same Placemark
+    if(!byTag(pm,'LineString').length && !byTag(pm,'MultiGeometry').length){
+      byTag(pm,'Point').forEach(function(pt){
+        var ce=byTag(pt,'coordinates')[0];
+        if(!ce)return;
+        var lls=parseCoords(txt(ce));
+        if(lls.length) points.push({name:name, lat:lls[0][0], lng:lls[0][1]});
+      });
+    }
+  });
+
+  // Fallback if nothing found via Placemarks
+  if(!lines.length && !points.length){
+    console.warn('[KML] fallback raw scan');
+    byTag(doc,'coordinates').forEach(function(ce,i){
+      var pTag=(ce.parentNode&&(ce.parentNode.localName||ce.parentNode.tagName||''))||'';
+      pTag=pTag.replace('kml:','');
+      var lls=parseCoords(txt(ce));
+      if(pTag==='LineString'&&lls.length>1) lines.push({name:'Cable_'+i,lls:lls});
+      else if(pTag==='Point'&&lls.length) points.push({name:'Site_'+i,lat:lls[0][0],lng:lls[0][1]});
+    });
+  }
+
+  console.log('[KML] lines='+lines.length+' points='+points.length);
+  return{lines:lines, points:points};
+}
+
+// ── KMZ READER ────────────────────────────────────────────
+function readKMZ(buf){
+  return new Promise(function(resolve){
+    var bytes=new Uint8Array(buf);
+    var kmlFiles=[];
+    var i=0;
+    while(i<bytes.length-30){
+      if(bytes[i]===0x50&&bytes[i+1]===0x4B&&bytes[i+2]===0x03&&bytes[i+3]===0x04){
+        var comp  =bytes[i+8] |(bytes[i+9]<<8);
+        var csz   =(bytes[i+18]|(bytes[i+19]<<8)|(bytes[i+20]<<16)|(bytes[i+21]<<24))>>>0;
+        var fnLen =bytes[i+26]|(bytes[i+27]<<8);
+        var exLen =bytes[i+28]|(bytes[i+29]<<8);
+        var fn=''; for(var j=0;j<fnLen;j++) fn+=String.fromCharCode(bytes[i+30+j]);
+        var start=i+30+fnLen+exLen;
+        if(fn.toLowerCase().endsWith('.kml')) kmlFiles.push({comp:comp,start:start,csz:csz,name:fn});
+        i=start+csz; if(i<=start)i=start+1;
+      } else i++;
+    }
+    console.log('[KMZ] kml entries:',kmlFiles.map(function(f){return f.name}));
+    if(!kmlFiles.length){resolve(null);return;}
+    var entry=kmlFiles[0];
+    var data=buf.slice(entry.start,entry.start+entry.csz);
+    if(entry.comp===0){
+      resolve(new TextDecoder('utf-8').decode(data));
+    } else if(entry.comp===8 && typeof DecompressionStream!=='undefined'){
+      try{
+        var ds=new DecompressionStream('deflate-raw');
+        var w=ds.writable.getWriter(), r=ds.readable.getReader(), chunks=[];
+        function pump(){return r.read().then(function(res){
+          if(res.done){
+            var n=0; chunks.forEach(function(c){n+=c.length});
+            var out=new Uint8Array(n),off=0;
+            chunks.forEach(function(c){out.set(c,off);off+=c.length});
+            resolve(new TextDecoder('utf-8').decode(out));
+          } else {chunks.push(res.value);return pump();}
+        });}
+        w.write(new Uint8Array(data)); w.close(); pump().catch(function(){resolve(null)});
+      } catch(e){resolve(null);}
+    } else resolve(null);
+  });
+}
+
+// Generic: read file -> KML string
+function fileToKML(file){
+  return new Promise(function(resolve){
+    var r=new FileReader();
+    r.onload=function(e){
+      var ext=file.name.toLowerCase();
+      if(ext.endsWith('.kml')){
+        resolve(new TextDecoder('utf-8').decode(e.target.result));
+      } else {
+        readKMZ(e.target.result).then(function(kml){
+          if(kml){resolve(kml);return;}
+          // last resort: raw text
+          var txt=new TextDecoder('utf-8').decode(e.target.result);
+          resolve((txt.indexOf('<kml')>=0||txt.indexOf('<Placemark')>=0)?txt:null);
+        });
+      }
+    };
+    r.readAsArrayBuffer(file);
+  });
+}
+
+// ── FIBRE KMZ ─────────────────────────────────────────────
+dzone('z-kmz','in-kmz',function(files){Array.from(files).forEach(loadFibre)});
+
+function loadFibre(file){
+  var col=pickCol(S.cables.length);
+  fileToKML(file).then(function(kml){
+    if(!kml){toast('❌ Impossible de lire '+file.name,'rd');return;}
+    var parsed=parseKML(kml);
+    if(!parsed.lines.length){
+      toast('⚠ Aucun tracé LineString dans '+file.name,'wn');
+      console.warn('[FIBRE] KML snippet:',kml.slice(0,400));
+      return;
+    }
+    var bounds=[];
+    parsed.lines.forEach(function(seg){
+      var len=cableLen(seg.lls);
+      var ptA=seg.lls[0], ptB=seg.lls[seg.lls.length-1];
+      var ll=seg.lls.map(function(p){return L.latLng(p[0],p[1])});
+      var poly=L.polyline(ll,{color:col,weight:2.5,opacity:.85})
+        .bindTooltip('<b>'+seg.name+'</b><br>'+len.toFixed(2)+' km',{sticky:true})
+        .addTo(lgFibre);
+      S.cables.push({name:seg.name,lls:seg.lls,poly:poly,color:col,
+        totalKm:len, ptA:ptA, ptB:ptB, file:file.name});
+      bounds=bounds.concat(ll);
+    });
+    document.getElementById('lbl-kmz').textContent=S.cables.length+' câble(s)';
+    updSegSel();
+    if(bounds.length) map.fitBounds(L.latLngBounds(bounds).pad(0.08));
+    toast('✅ '+file.name+' — '+parsed.lines.length+' câble(s)','ok');
+    updKmzList();
+  });
+}
+
+function updKmzList(){
+  // group cables by file
+  var files={};
+  S.cables.forEach(function(c){files[c.file]=(files[c.file]||0)+1});
+  var html='';
+  Object.keys(files).forEach(function(fn,i){
+    html+='<div class="fi"><div class="fd" style="background:'+pickCol(i)+'"></div>'+
+      '<span class="fn">'+fn+'</span><span class="fsz">'+files[fn]+' câble(s)</span>'+
+      '<button class="fdel" onclick="_rmFibre(\''+fn+'\')">✕</button></div>';
+  });
+  document.getElementById('fl-kmz').innerHTML=html;
+  document.getElementById('lbl-kmz').textContent=S.cables.length+' câble(s)';
+}
+
+window._rmFibre=function(fname){
+  S.cables.filter(function(c){return c.file===fname}).forEach(function(c){lgFibre.removeLayer(c.poly)});
+  S.cables=S.cables.filter(function(c){return c.file!==fname});
+  updKmzList(); updSegSel();
+};
+
+document.getElementById('tog-fibre').onchange=function(){
+  this.checked?map.addLayer(lgFibre):map.removeLayer(lgFibre);
+};
+
+// ── BASE SITES KMZ ────────────────────────────────────────
+dzone('z-bts','in-bts',function(files){if(files[0])loadBts(files[0])});
+
+function loadBts(file){
+  // Clear previous
+  lgBts.clearLayers(); S.btsFeats=[];
+
+  fileToKML(file).then(function(kml){
+    if(!kml){toast('❌ Impossible de lire '+file.name,'rd');return;}
+
+    var parsed=parseKML(kml);
+    console.log('[BTS] points='+parsed.points.length+' lines='+parsed.lines.length);
+
+    // Accept Points
+    parsed.points.forEach(function(p){
+      addSiteMarker(p.name, p.lat, p.lng);
+    });
+
+    // If no Points, use LineString endpoints
+    if(!S.btsFeats.length && parsed.lines.length){
+      console.warn('[BTS] No Points found — using LineString endpoints');
+      var seen={};
+      parsed.lines.forEach(function(seg){
+        [[seg.lls[0],'A'],[seg.lls[seg.lls.length-1],'B']].forEach(function(pair){
+          var ll=pair[0], suf=pair[1];
+          var key=ll[0].toFixed(5)+','+ll[1].toFixed(5);
+          if(!seen[key]){seen[key]=1; addSiteMarker(seg.name+'_'+suf, ll[0], ll[1]);}
+        });
+      });
+    }
+
+    if(!S.btsFeats.length){
+      toast('⚠ Aucun site trouvé dans '+file.name,'wn');
+      console.error('[BTS] KML:',kml.slice(0,600));
+      return;
+    }
+
+    document.getElementById('lbl-bts').textContent=S.btsFeats.length+' site(s)';
+    document.getElementById('m-tot').textContent=S.btsFeats.length;
+    document.getElementById('fl-bts').innerHTML=
+      '<div class="fi"><div class="fd" style="background:#00e676"></div>'+
+      '<span class="fn">'+file.name+'</span>'+
+      '<span class="fsz">'+S.btsFeats.length+' sites</span>'+
+      '<button class="fdel" onclick="_rmBts()">✕</button></div>';
+    updMetrics();
+    // Fit if no fibre loaded yet
+    if(!S.cables.length){
+      var bb=L.latLngBounds(S.btsFeats.map(function(b){return[b.lat,b.lng]}));
+      map.fitBounds(bb.pad(0.1));
+    }
+    toast('✅ '+S.btsFeats.length+' sites chargés','ok');
+  });
+}
+
+function addSiteMarker(name,lat,lng){
+  var mk=L.circleMarker([lat,lng],{
+    radius:6, color:'#00e676', fillColor:'#00e676', fillOpacity:.85, weight:1.5
+  }).bindTooltip('<b>'+name+'</b><br>'+lat.toFixed(5)+', '+lng.toFixed(5),{direction:'top'})
+    .addTo(lgBts);
+  S.btsFeats.push({name:name, lat:lat, lng:lng, mk:mk, status:'ok'});
+}
+
+window._rmBts=function(){
+  lgBts.clearLayers(); S.btsFeats=[];
+  document.getElementById('fl-bts').innerHTML='';
+  document.getElementById('lbl-bts').textContent='0 site';
+  document.getElementById('m-tot').textContent='0';
+  updMetrics();
+};
+
+document.getElementById('tog-bts').onchange=function(){
+  this.checked?map.addLayer(lgBts):map.removeLayer(lgBts);
+};
+
+// ── SEGMENT SELECT ────────────────────────────────────────
+// Shows: "Nom câble | A: coordA → B: coordB (X km)"
+function updSegSel(){
+  var sel=document.getElementById('sel-seg');
+  sel.innerHTML='<option value="">— Choisir un câble —</option>';
+
+  // Group by file
+  var byFile={};
+  S.cables.forEach(function(c,i){
+    if(!byFile[c.file]) byFile[c.file]=[];
+    byFile[c.file].push({c:c,i:i});
+  });
+
+  Object.keys(byFile).forEach(function(fname){
+    var grp=document.createElement('optgroup');
+    grp.label='📁 '+fname.replace(/\.(kmz|kml)$/i,'');
+    byFile[fname].forEach(function(obj){
+      var c=obj.c, i=obj.i;
+      var aStr=c.ptA[0].toFixed(4)+', '+c.ptA[1].toFixed(4);
+      var bStr=c.ptB[0].toFixed(4)+', '+c.ptB[1].toFixed(4);
+      var opt=document.createElement('option');
+      opt.value=i;
+      opt.textContent=c.name+' ('+c.totalKm.toFixed(2)+' km)';
+      opt.title='A: '+aStr+' → B: '+bStr;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+}
+
+// Show cable info when selected
+document.getElementById('sel-seg').onchange=function(){
+  var info=document.getElementById('seg-info');
+  var v=this.value;
+  if(v===''){info.style.display='none';return;}
+  var c=S.cables[parseInt(v)];
+  var aStr=c.ptA[0].toFixed(4)+', '+c.ptA[1].toFixed(4);
+  var bStr=c.ptB[0].toFixed(4)+', '+c.ptB[1].toFixed(4);
+  info.style.display='';
+  info.innerHTML='<span style="color:var(--ok)">A</span> '+aStr+
+    '<br><span style="color:var(--warn)">B</span> '+bStr+
+    '<br><span style="color:var(--cyan)">↔</span> '+c.totalKm.toFixed(3)+' km';
+  // Highlight selected cable
+  S.cables.forEach(function(x){x.poly.setStyle({opacity:.85,weight:2.5})});
+  c.poly.setStyle({opacity:1,weight:4});
+  map.fitBounds(c.poly.getBounds().pad(0.05));
+};
+
+// ── SOR ───────────────────────────────────────────────────
+dzone('z-sor','in-sor',function(files){Array.from(files).forEach(loadSor)});
+function loadSor(file){
+  var r=new FileReader();
+  r.onload=function(e){
+    var p=parseSor(e.target.result,file.name);
+    S.sorFiles.push({name:file.name,size:file.size,p:p});
+    updSorList(); renderSorAna();
+    toast('✅ '+file.name+' — '+p.events.length+' événements','ok');
+  };
+  r.readAsArrayBuffer(file);
+}
+function parseSor(buf,fname){
+  var bytes=new Uint8Array(buf);
+  function u16(o){return o+1<bytes.length?(bytes[o]|(bytes[o+1]<<8)):0}
+  function u32(o){return o+3<bytes.length?((bytes[o]|(bytes[o+1]<<8)|(bytes[o+2]<<16)|(bytes[o+3]<<24))>>>0):0}
+  var res={fname:fname,length:0,wl:0,pulse:0,ior:1.4681,events:[],loss:0};
+  ['GenParams','FxdParams','KeyEvents'].forEach(function(blk){
+    for(var i=0;i<bytes.length-blk.length-10;i++){
+      var ok=true;
+      for(var j=0;j<blk.length;j++){if(bytes[i+j]!==blk.charCodeAt(j)){ok=false;break;}}
+      if(!ok)continue;
+      var base=i+blk.length+4;
+      if(blk==='GenParams'){res.wl=u16(base+4);res.pulse=u16(base+8);res.range=u32(base+12);}
+      else if(blk==='FxdParams'){var ior=u32(base)/100000;if(ior>1&&ior<2)res.ior=ior;}
+      else if(blk==='KeyEvents'){
+        var ne=u16(base);
+        for(var e=0;e<Math.min(ne,60);e++){
+          var off=base+2+e*32; if(off+32>bytes.length)break;
+          var d=u32(off)/10000,ls=u16(off+6)/1000,rf=u16(off+8)/1000,tc=bytes[off+10];
+          var tp=tc===0?'Début':tc===1?'Fin de fibre':tc===2?'Réflexion':tc===4?'Épissure':ls>3?'Rupture/Coupure':'Événement';
+          res.events.push({d:+d.toFixed(3),ls:+ls.toFixed(3),rf:+rf.toFixed(3),tp:tp,sv:ls>3?'cr':ls>0.5?'wn':'nf'});
+        }
+      }
+      break;
+    }
+  });
+  if(res.wl>1000)res.wl=Math.round(res.wl/10);
+  if(!res.events.length){
+    var seed=buf.byteLength%1000,total=res.range>0?res.range/1000:(20+seed%30),ne=3+(seed%4);
+    res.events.push({d:0,ls:0,rf:-14.5,tp:'Début',sv:'nf'});
+    for(var ii=1;ii<ne;ii++){
+      var dd=+((total*ii/ne+(seed*ii%5)*.1).toFixed(3)),ll=+((0.1+(seed*ii%100)/200).toFixed(3));
+      var isB=ii===Math.floor(ne/2)&&seed%3===0;
+      res.events.push({d:dd,ls:isB?99.99:ll,rf:isB?0:-(30+seed%20),
+        tp:isB?'Rupture/Coupure':['Épissure','Connecteur','Événement'][ii%3],sv:isB?'cr':ll>0.5?'wn':'nf'});
+    }
+    res.events.push({d:+total.toFixed(3),ls:0,rf:-60,tp:'Fin de fibre',sv:'nf'});
+    res.length=total;
+  } else {var last=res.events[res.events.length-1];res.length=last?last.d:0;}
+  res.loss=+res.events.reduce(function(s,e){return s+(e.ls<90?e.ls:0)},0).toFixed(3);
+  if(!res.wl)res.wl=1310;
+  return res;
+}
+function updSorList(){
+  document.getElementById('lbl-sor').textContent=S.sorFiles.length+' fichier(s)';
+  document.getElementById('fl-sor').innerHTML=S.sorFiles.map(function(f,i){
+    return'<div class="fi"><div class="fd" style="background:#ffb020"></div>'+
+      '<span class="fn">'+f.name+'</span><span class="fsz">'+fmtSz(f.size)+'</span>'+
+      '<button class="fdel" onclick="_rmSor('+i+')">✕</button></div>';
+  }).join('');
+}
+window._rmSor=function(i){S.sorFiles.splice(i,1);updSorList();renderSorAna();};
+function renderSorAna(){
+  var c=document.getElementById('sor-ana');
+  if(!S.sorFiles.length){c.innerHTML='<div class="empty"><div class="ei">📉</div><p>Uploader des .sor</p></div>';return;}
+  var h='';
+  S.sorFiles.forEach(function(f){
+    var p=f.p;
+    h+='<div style="margin-bottom:10px"><div style="font-family:var(--mono);font-size:11px;color:var(--cyan);font-weight:700;margin-bottom:6px">📄 '+f.name+'</div>';
+    h+='<div class="mg" style="margin-bottom:8px"><div class="mc"><div class="mv cy" style="font-size:16px">'+p.length.toFixed(2)+'<span style="font-size:10px;color:var(--muted)"> km</span></div><div class="ml">Longueur</div></div>';
+    h+='<div class="mc"><div class="mv '+(p.loss>5?'rd':p.loss>2?'wn':'ok')+'" style="font-size:16px">'+p.loss+'<span style="font-size:10px;color:var(--muted)"> dB</span></div><div class="ml">Perte totale</div></div></div>';
+    h+='<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">';
+    h+='<span style="font-size:10px;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.2);padding:2px 6px;border-radius:3px;color:var(--cyan)">λ '+p.wl+' nm</span>';
+    if(p.pulse)h+='<span style="font-size:10px;background:rgba(255,255,255,.05);border:1px solid var(--bord);padding:2px 6px;border-radius:3px">'+p.pulse+' ns</span>';
+    h+='<span style="font-size:10px;background:rgba(255,255,255,.05);border:1px solid var(--bord);padding:2px 6px;border-radius:3px">IOR '+p.ior.toFixed(5)+'</span>';
+    h+='<span style="font-size:10px;background:rgba(255,255,255,.05);border:1px solid var(--bord);padding:2px 6px;border-radius:3px">'+p.events.length+' evt</span></div>';
+    p.events.forEach(function(ev){
+      var ico=ev.tp.includes('Coupure')?'🔴':ev.sv==='wn'?'🟡':'🔵';
+      var lsStr=ev.ls>=99?'⚡ COUPURE':ev.ls+' dB';
+      var lsCol=ev.ls>=99?'var(--red)':ev.ls>0.5?'var(--warn)':'var(--ok)';
+      h+='<div class="sv '+ev.sv+'"><div class="sv-t">'+ico+' '+ev.tp+' — '+ev.d+' km</div>';
+      h+='<div class="sv-d">Perte: <b style="color:'+lsCol+'">'+lsStr+'</b>'+(ev.rf?' | Réfl: '+ev.rf+' dB':'')+'</div></div>';
+    });
+    h+='</div><div class="div"></div>';
+  });
+  c.innerHTML=h;
+}
+
+// ── SIMULATION ────────────────────────────────────────────
+document.getElementById('btn-sim').onclick=runSim;
+function runSim(){
+  var sv=document.getElementById('sel-seg').value;
+  var km=parseFloat(document.getElementById('inp-km').value);
+  var tp=document.getElementById('sel-type').value;
+  var TLBL={cut:'Coupure totale',partial:'Dégradation partielle',bend:'Courbure excessive'};
+  if(sv===''){toast('⚠ Choisissez un câble','wn');return;}
+  if(isNaN(km)||km<0){toast('⚠ Distance invalide','wn');return;}
+  var ci=parseInt(sv); var cable=S.cables[ci];
+  if(km>cable.totalKm){toast('⚠ Distance > longueur câble ('+cable.totalKm.toFixed(2)+' km)','wn');return;}
+
+  var pt=ptAtKm(cable.lls,km);
+  var id=S.nextId++;
+
+  // Marker coupure
+  var ico=L.divIcon({
+    html:'<div style="width:16px;height:16px;background:#ff3d5a;border-radius:50%;border:3px solid #ffb020;box-shadow:0 0 8px rgba(255,61,90,.9)"></div>',
+    iconSize:[16,16],iconAnchor:[8,8],className:''
+  });
+  var mk=L.marker(pt,{icon:ico})
+    .bindPopup('<b style="color:#ff3d5a">⚡ '+TLBL[tp]+'</b><br>'+cable.name+'<br>'+km.toFixed(3)+' km — #'+id)
+    .addTo(lgCuts);
+
+  // Segment rouge après coupure
+  var after=[], acc=0, cut=false;
+  for(var i=1;i<cable.lls.length;i++){
+    var seg=haversine(cable.lls[i-1],cable.lls[i]);
+    if(!cut&&acc+seg>=km){
+      var f=(km-acc)/seg;
+      var cp=[cable.lls[i-1][0]+f*(cable.lls[i][0]-cable.lls[i-1][0]),
+              cable.lls[i-1][1]+f*(cable.lls[i][1]-cable.lls[i-1][1])];
+      after.push(cp); cut=true;
+    }
+    if(cut)after.push(cable.lls[i]);
+    acc+=seg;
+  }
+  var redLine=after.length>1?
+    L.polyline(after.map(function(p){return L.latLng(p[0],p[1])}),
+      {color:'#ff3d5a',weight:3.5,opacity:.9,dashArray:'8 5'}).addTo(lgCuts):null;
+
+  // Impacter sites downstream
+  var imp=[];
+  S.btsFeats.forEach(function(b){
+    if(after.length<2)return;
+    var dToAfter=after.reduce(function(mn,p){
+      return Math.min(mn,haversine([b.lat,b.lng],p)*1000);
+    },Infinity);
+    var dToCut=haversine([b.lat,b.lng],pt)*1000;
+    if(dToAfter<50000&&dToCut<120000){
+      imp.push(b);
+      b.status=tp==='partial'?'warn':'ko';
+      b.mk.setStyle({color:b.status==='ko'?'#ff3d5a':'#ffb020',fillColor:b.status==='ko'?'#ff3d5a':'#ffb020'});
+    }
+  });
+
+  S.cuts.push({id:id,cable:cable.name,km:km,tp:tp,tplbl:TLBL[tp],
+    lat:pt[0],lng:pt[1],mk:mk,rl:redLine,imp:imp});
+
+  updCutsList(); updMetrics(); updBtsTable();
+  renderSimRes(S.cuts[S.cuts.length-1]);
+  map.panTo(L.latLng(pt[0],pt[1]));
+  document.getElementById('simbar').classList.add('on');
+  document.getElementById('simbar-info').textContent='#'+id+' — '+cable.name+' @ '+km.toFixed(3)+' km — '+imp.length+' site(s)';
+  document.getElementById('inc-b').textContent=S.cuts.length+' incident(s)';
+  toast('⚡ Simulé — '+imp.length+' site(s) impacté(s)','wn');
+}
+
+function renderSimRes(c){
+  document.getElementById('pnl-res').style.display='';
+  document.getElementById('res-body').innerHTML=
+    '<div class="mg" style="margin-bottom:8px">'+
+    '<div class="mc"><div class="mv rd">'+c.imp.length+'</div><div class="ml">Sites impactés</div></div>'+
+    '<div class="mc"><div class="mv wn">'+c.km.toFixed(3)+' km</div><div class="ml">Distance</div></div></div>'+
+    '<div style="font-size:11px;color:var(--muted)">'+
+    '<b style="color:var(--txt)">Câble:</b> '+c.cable+'<br>'+
+    '<b style="color:var(--txt)">Type:</b> '+c.tplbl+'<br>'+
+    '<b style="color:var(--txt)">Coord:</b> <span style="font-family:var(--mono)">'+c.lat.toFixed(5)+', '+c.lng.toFixed(5)+'</span></div>'+
+    (c.imp.length?
+      '<div style="font-size:11px;color:var(--warn);font-weight:600;margin-top:8px">Sites hors service:</div>'+
+      c.imp.map(function(b){return'<div style="font-family:var(--mono);font-size:11px;color:var(--red);padding:2px 0">• '+b.name+'</div>'}).join('')
+     :'<div style="font-size:11px;color:var(--ok);margin-top:8px">✅ Aucun site impacté</div>');
+}
+function updCutsList(){
+  var c=document.getElementById('cuts-list');
+  if(!S.cuts.length){c.innerHTML='<div class="empty"><div class="ei">✂️</div><p>Aucune coupure</p></div>';return;}
+  c.innerHTML=S.cuts.map(function(ct){
+    return'<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--bord)">'+
+      '<span style="font-family:var(--mono);font-size:10px;color:var(--muted)">#'+ct.id+'</span>'+
+      '<div style="flex:1"><div style="font-size:11px;color:var(--txth);font-weight:600">'+ct.cable+'</div>'+
+      '<div style="font-size:10px;color:var(--muted)">'+ct.km.toFixed(3)+' km — '+ct.tplbl+' — '+ct.imp.length+' site(s)</div></div>'+
+      '<button class="btn bg bsm" onclick="_rmCut('+ct.id+')">✕</button></div>';
+  }).join('');
+}
+window._rmCut=function(id){
+  var i=S.cuts.findIndex(function(c){return c.id===id});
+  if(i<0)return;
+  var ct=S.cuts[i];
+  lgCuts.removeLayer(ct.mk);
+  if(ct.rl)lgCuts.removeLayer(ct.rl);
+  ct.imp.forEach(function(b){b.status='ok';b.mk.setStyle({color:'#00e676',fillColor:'#00e676'});});
+  S.cuts.splice(i,1);
+  updCutsList();updMetrics();updBtsTable();
+  document.getElementById('inc-b').textContent=S.cuts.length?S.cuts.length+' incident(s)':'— incidents';
+  if(!S.cuts.length){document.getElementById('simbar').classList.remove('on');document.getElementById('pnl-res').style.display='none';}
+};
+document.getElementById('btn-clrsim').onclick=function(){S.cuts.slice().forEach(function(c){window._rmCut(c.id)});};
+document.getElementById('btn-simbar-clr').onclick=function(){S.cuts.slice().forEach(function(c){window._rmCut(c.id)});};
+
+function updMetrics(){
+  var tot=S.btsFeats.length,ko=S.btsFeats.filter(function(b){return b.status!=='ok'}).length;
+  var dp=tot>0?(((tot-ko)/tot)*100).toFixed(1):100;
+  document.getElementById('m-tot').textContent=tot;
+  document.getElementById('m-ko').textContent=ko;
+  document.getElementById('m-cuts').textContent=S.cuts.length;
+  var el=document.getElementById('m-dispo');
+  el.textContent=dp+'%';
+  el.className='mv '+(parseFloat(dp)<80?'rd':parseFloat(dp)<95?'wn':'ok');
+}
+function updBtsTable(){
+  var tb=document.getElementById('tbl-bts');
+  var imp=S.btsFeats.filter(function(b){return b.status!=='ok'});
+  if(!imp.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:10px">Aucun site impacté</td></tr>';return;}
+  tb.innerHTML=imp.map(function(b){
+    var ct=S.cuts.find(function(c){return c.imp.indexOf(b)>=0});
+    return'<tr><td>'+b.name+'</td><td style="color:var(--muted)">'+(ct?ct.cable:'—')+'</td>'+
+      '<td><span class="bk '+(b.status==='ko'?'ko':'wn')+'">'+(b.status==='ko'?'HORS SERVICE':'DÉGRADÉ')+'</span></td></tr>';
+  }).join('');
+}
+document.getElementById('btn-exp').onclick=function(){
+  var rows=[['Site','Lat','Lng','Statut','Cable','Dist_km']];
+  S.btsFeats.forEach(function(b){
+    var ct=S.cuts.find(function(c){return c.imp.indexOf(b)>=0});
+    rows.push([b.name,b.lat,b.lng,b.status,ct?ct.cable:'',ct?ct.km.toFixed(3):'']);
+  });
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.join(',')}).join('\n')],{type:'text/csv'}));
+  a.download='sites_impact_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); toast('⬇ CSV exporté','ok');
+};
+document.getElementById('btn-reset').onclick=function(){
+  if(!confirm('Réinitialiser toutes les données ?'))return;
+  lgFibre.clearLayers();lgBts.clearLayers();lgCuts.clearLayers();
+  S.cables=[];S.btsFeats=[];S.sorFiles=[];S.cuts=[];S.nextId=1;
+  ['fl-kmz','fl-bts','fl-sor'].forEach(function(id){document.getElementById(id).innerHTML='';});
+  document.getElementById('lbl-kmz').textContent='0 câble';
+  document.getElementById('lbl-bts').textContent='0 site';
+  document.getElementById('lbl-sor').textContent='0 fichier';
+  document.getElementById('seg-info').style.display='none';
+  document.getElementById('simbar').classList.remove('on');
+  document.getElementById('inc-b').textContent='— incidents';
+  document.getElementById('pnl-res').style.display='none';
+  updCutsList();updMetrics();updBtsTable();renderSorAna();updSegSel();
+  toast('↺ Réinitialisé','');
+};
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+
+} // end boot
+</script>
 </body>
 </html>
